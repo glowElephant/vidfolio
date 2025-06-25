@@ -25,6 +25,7 @@
     <div id="container" class="layout">
         <div id="sidebar">
             <button id="addVideoBtn">Add Video</button>
+            <input id="videoFileInput" type="file" accept="video/*" style="display:none" />
             <div id="videoList"></div>
             <h3>Bookmarks</h3>
             <ul id="bookmarkList"></ul>
@@ -44,6 +45,7 @@
     </div>
     <script>
         const addVideoBtn = document.getElementById('addVideoBtn');
+        const videoFileInput = document.getElementById('videoFileInput');
         const videoListDiv = document.getElementById('videoList');
         const bookmarkList = document.getElementById('bookmarkList');
         const videoPlayer = document.getElementById('videoPlayer');
@@ -113,22 +115,15 @@
         }
 
         addVideoBtn.addEventListener('click', () => {
-            const url = prompt('Enter video URL or leave empty to select a file');
-            if (url) {
-                videos.push({ title: url, url, bookmarks: [] });
+            videoFileInput.value = '';
+            videoFileInput.click();
+        });
+
+        videoFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                videos.push({ title: file.name, file, bookmarks: [] });
                 renderVideoList();
-            } else {
-                const fileInput = document.createElement('input');
-                fileInput.type = 'file';
-                fileInput.accept = 'video/*';
-                fileInput.addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        videos.push({ title: file.name, file, bookmarks: [] });
-                        renderVideoList();
-                    }
-                });
-                fileInput.click();
             }
         });
 
