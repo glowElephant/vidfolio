@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vidfolio</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif; }
+        .layout { display: flex; height: 100vh; }
+        #sidebar { width: 20%; padding: 10px; box-sizing: border-box; border-right: 1px solid #ccc; overflow-y: auto; }
+        #main { width: 50%; padding: 10px; box-sizing: border-box; }
+        #codeRenderer { width: 30%; padding: 10px; box-sizing: border-box; border-left: 1px solid #ccc; overflow-y: auto; }
+        h2 { margin-top: 0; }
+        #videoList input[type="text"] { width: 80%; }
+        #bookmarkList { margin-top: 20px; }
+        #bookmarkList li { list-style: none; margin-bottom: 5px; }
+        #bookmarkList button { margin-left: 5px; }
+        #bookmarkForm textarea { width: 100%; height: 100px; }
+        #bookmarkForm input[type="text"] { width: 100%; box-sizing: border-box; }
+        .video-item { margin-bottom: 10px; cursor: pointer; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div id="container" class="layout">
+        <div id="sidebar">
+            <button id="addVideoBtn">Add Video</button>
+            <div id="videoList"></div>
+            <h3>Bookmarks</h3>
+            <ul id="bookmarkList"></ul>
+        </div>
+        <div id="main">
+            <video id="videoPlayer" width="100%" controls></video>
+            <form id="bookmarkForm">
+                <input type="text" id="bookmarkTitle" placeholder="Bookmark title" />
+                <textarea id="bookmarkContent" placeholder="Markdown code snippet"></textarea>
+                <button type="submit">Save Bookmark</button>
+            </form>
+        </div>
+        <div id="codeRenderer">
+            <h3>Code Snippet</h3>
+            <div id="codeContainer"></div>
+        </div>
+    </div>
+    <script>
+        const addVideoBtn = document.getElementById('addVideoBtn');
+        const videoListDiv = document.getElementById('videoList');
+        const bookmarkList = document.getElementById('bookmarkList');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const bookmarkForm = document.getElementById('bookmarkForm');
+        const bookmarkTitle = document.getElementById('bookmarkTitle');
+        const bookmarkContent = document.getElementById('bookmarkContent');
+        const codeContainer = document.getElementById('codeContainer');
+
+        let videos = [];
+        let currentVideoIndex = null;
+
+        function renderVideoList() {
+            videoListDiv.innerHTML = '';
+            videos.forEach((v, i) => {
+                const div = document.createElement('div');
+                div.className = 'video-item';
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = v.title;
+                input.addEventListener('input', (e) => {
+                    v.title = e.target.value;
+                });
+                div.appendChild(input);
+                div.addEventListener('click', () => loadVideo(i));
+                videoListDiv.appendChild(div);
+            });
+        }
+
+        function renderBookmarkList() {
+            bookmarkList.innerHTML = '';
+            const video = videos[currentVideoIndex];
+            if (!video) return;
+            video.bookmarks.sort((a, b) => a.time - b.time);
+            video.bookmarks.forEach((b, idx) => {
+                const li = document.createElement('li');
+                const timeStr = new Date(b.time * 1000).toISOString().substr(14,5);
+                const span = document.createElement('span');
+                span.textContent = `${timeStr} - ${b.title}`;
+                span.addEventListener('dblclick', () => {
+                    const newTitle = prompt('Edit bookmark title', b.title);
+                    if (newTitle !== null) { b.title = newTitle; renderBookmarkList(); }
+                });
+                span.addEventListener('click', () => {
+                    videoPlayer.currentTime = b.time;
+                });
+                const del = document.createElement('button');
+                del.textContent = 'X';
+                del.addEventListener('click', () => {
+                    video.bookmarks.splice(idx,1);
+                    renderBookmarkList();
+                });
+                li.appendChild(span);
+                li.appendChild(del);
+                bookmarkList.appendChild(li);
+            });
+        }
+
+        function loadVideo(index) {
+            currentVideoIndex = index;
+            const video = videos[index];
+            if (video.url) {
+                videoPlayer.src = video.url;
+            } else if (video.file) {
+                videoPlayer.src = URL.createObjectURL(video.file);
+            }
+            renderBookmarkList();
+        }
+
+        addVideoBtn.addEventListener('click', () => {
+            const url = prompt('Enter video URL or leave empty to select a file');
+            if (url) {
+                videos.push({ title: url, url, bookmarks: [] });
+                renderVideoList();
+            } else {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'video/*';
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        videos.push({ title: file.name, file, bookmarks: [] });
+                        renderVideoList();
+                    }
+                });
+                fileInput.click();
+            }
+        });
+
+        bookmarkForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const video = videos[currentVideoIndex];
+            if (!video) return;
+            const time = videoPlayer.currentTime;
+            video.bookmarks.push({
+                time,
+                title: bookmarkTitle.value,
+                content: bookmarkContent.value
+            });
+            bookmarkTitle.value = '';
+            bookmarkContent.value = '';
+            renderBookmarkList();
+        });
+
+        videoPlayer.addEventListener('timeupdate', () => {
+            const video = videos[currentVideoIndex];
+            if (!video) return;
+            let current = null;
+            for (let i = 0; i < video.bookmarks.length; i++) {
+                if (videoPlayer.currentTime >= video.bookmarks[i].time) {
+                    current = video.bookmarks[i];
+                } else {
+                    break;
+                }
+            }
+            if (current) {
+                codeContainer.innerHTML = marked.parse(current.content || '');
+            }
+        });
+    </script>
+</body>
+</html>
