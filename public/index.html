@@ -103,6 +103,14 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 6px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #2b2b2b;
+        }
+
+        .video-item:hover {
+            background: #333;
         }
 
         #bookmarkList {
@@ -115,6 +123,15 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 6px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #2b2b2b;
+            cursor: pointer;
+        }
+
+        #bookmarkList li:hover {
+            background: #333;
         }
 
         #bookmarkList button {
@@ -125,6 +142,32 @@
 
         #auth {
             margin-bottom: 10px;
+        }
+
+        #viewDetailBtn {
+            margin-bottom: 10px;
+        }
+
+        #detailOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        #detailContent {
+            background: #1e1e1e;
+            padding: 20px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow: auto;
+            border: 1px solid #444;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -161,7 +204,12 @@
         </div>
         <div id="codeRenderer">
             <h3>Code Snippet</h3>
+            <button id="viewDetailBtn">View Details</button>
             <div id="codeContainer"></div>
+        </div>
+        <div id="detailOverlay">
+            <div id="detailContent"></div>
+            <button id="closeDetailBtn">Close</button>
         </div>
     </div>
     <script>
@@ -177,6 +225,29 @@
         const passwordInput = document.getElementById('passwordInput');
         const loginBtn = document.getElementById('loginBtn');
         const logoutBtn = document.getElementById('logoutBtn');
+        const viewDetailBtn = document.getElementById('viewDetailBtn');
+        const detailOverlay = document.getElementById('detailOverlay');
+        const detailContent = document.getElementById('detailContent');
+        const closeDetailBtn = document.getElementById('closeDetailBtn');
+
+        let currentBookmark = null;
+
+        viewDetailBtn.addEventListener('click', () => {
+            detailContent.innerHTML = '';
+            if (currentBookmark) {
+                const title = document.createElement('h3');
+                title.textContent = currentBookmark.title;
+                detailContent.appendChild(title);
+            }
+            const content = document.createElement('div');
+            content.innerHTML = codeContainer.innerHTML;
+            detailContent.appendChild(content);
+            detailOverlay.style.display = 'flex';
+        });
+
+        closeDetailBtn.addEventListener('click', () => {
+            detailOverlay.style.display = 'none';
+        });
 
         let isAdmin = false;
 
@@ -261,6 +332,8 @@
                 span.textContent = `${timeStr} - ${b.title}`;
                 span.addEventListener('click', () => {
                     videoPlayer.currentTime = b.time;
+                    currentBookmark = b;
+                    codeContainer.innerHTML = marked.parse(b.content || '');
                 });
                 li.appendChild(span);
                 if (isAdmin) {
@@ -339,6 +412,7 @@
                 }
             }
             if (current) {
+                currentBookmark = current;
                 codeContainer.innerHTML = marked.parse(current.content || '');
             }
         });
