@@ -27,7 +27,25 @@
             padding: 20px;
             box-sizing: border-box;
             border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #videoSection, #bookmarkSection {
+            flex: 1;
             overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        #videoSection {
+            border-bottom: 1px solid #333;
+        }
+
+        hr.divider {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 10px 0;
         }
 
         #main {
@@ -82,10 +100,12 @@
         .video-item {
             margin-bottom: 10px;
             cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         #bookmarkList {
-            margin-top: 20px;
             padding: 0;
         }
 
@@ -112,16 +132,24 @@
 <body>
     <div id="container" class="layout">
         <div id="sidebar">
-            <div id="auth">
-                <input type="password" id="passwordInput" placeholder="Admin password" />
-                <button id="loginBtn">Login</button>
-                <button id="logoutBtn" style="display:none">Logout</button>
+            <div id="controls">
+                <div id="auth">
+                    <input type="password" id="passwordInput" placeholder="Admin password" />
+                    <button id="loginBtn">Login</button>
+                    <button id="logoutBtn" style="display:none">Logout</button>
+                </div>
+                <button id="addVideoBtn">Add Video</button>
+                <input id="videoFileInput" type="file" accept="video/*" style="display:none" />
             </div>
-            <button id="addVideoBtn">Add Video</button>
-            <input id="videoFileInput" type="file" accept="video/*" style="display:none" />
-            <div id="videoList"></div>
-            <h3>Bookmarks</h3>
-            <ul id="bookmarkList"></ul>
+            <hr class="divider" />
+            <div id="videoSection">
+                <h3>Videos</h3>
+                <div id="videoList"></div>
+            </div>
+            <div id="bookmarkSection">
+                <h3>Bookmarks</h3>
+                <ul id="bookmarkList"></ul>
+            </div>
         </div>
         <div id="main">
             <video id="videoPlayer" width="100%" controls></video>
@@ -194,6 +222,28 @@
                 const span = document.createElement('span');
                 span.textContent = v.title;
                 div.appendChild(span);
+                if (isAdmin) {
+                    const edit = document.createElement('button');
+                    edit.textContent = '✎';
+                    edit.style.marginLeft = '5px';
+                    edit.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const title = prompt('New title', v.title);
+                        if (title && title !== v.title) {
+                            fetch(`/api/videos/${v.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ title })
+                            }).then(r => {
+                                if (r.ok) {
+                                    v.title = title;
+                                    renderVideoList();
+                                }
+                            });
+                        }
+                    });
+                    div.appendChild(edit);
+                }
                 div.addEventListener('click', () => loadVideo(i));
                 videoListDiv.appendChild(div);
             });
