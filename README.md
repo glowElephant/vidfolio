@@ -1,18 +1,22 @@
 # Vidfolio
 
-This project now includes a simple Node.js server so videos and bookmarks can
-be stored and viewed on the web. Run the server and open `http://localhost:3000`
-in your browser.
+이 프로젝트는 동영상과 북마크를 웹에서 저장하고 볼 수 있는 간단한 Node.js 서버를 포함합니다. 서버를 실행한 후 브라우저에서 `http://localhost:3000` 주소를 열면 됩니다.
 
-## Usage
+## 사용법
 
-Install dependencies and start the server:
+의존성을 설치하고 서버를 시작하려면 다음 명령을 실행하세요:
 
 ```bash
 npm install
 npm start
 ```
 
-Set the environment variable `ADMIN_PASSWORD` to control the admin login. Only
-logged in administrators can upload videos or add bookmarks. Visitors can watch
-videos and browse existing bookmarks but cannot modify them.
+서버는 `.env` 파일을 읽어 환경 변수를 설정합니다. 예시는 다음과 같습니다.
+
+```
+ADMIN_PASSWORD=원하는관리자비밀번호
+SESSION_SECRET=아무문자열
+PORT=3000
+```
+
+`ADMIN_PASSWORD`는 관리자 로그인을 위해 사용됩니다. 관리자로 로그인해야 동영상 업로드나 북마크 추가가 가능하며, 방문자는 영상을 시청하고 기존 북마크를 볼 수만 있습니다.
