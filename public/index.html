@@ -103,6 +103,14 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 6px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #2b2b2b;
+        }
+
+        .video-item:hover {
+            background: #333;
         }
 
         #bookmarkList {
@@ -115,6 +123,15 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 6px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #2b2b2b;
+            cursor: pointer;
+        }
+
+        #bookmarkList li:hover {
+            background: #333;
         }
 
         #bookmarkList button {
@@ -125,6 +142,51 @@
 
         #auth {
             margin-bottom: 10px;
+        }
+
+        #viewDetailBtn {
+            margin-bottom: 10px;
+        }
+
+        #detailOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        #detailContent {
+            position: relative;
+            background: #1e1e1e;
+            padding: 20px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+            border: 1px solid #444;
+            border-radius: 8px;
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
+        }
+
+        #closeDetailBtn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff5252;
+            border: none;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #closeDetailBtn:hover {
+            background: #ff6b6b;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -161,7 +223,14 @@
         </div>
         <div id="codeRenderer">
             <h3>Code Snippet</h3>
+            <button id="viewDetailBtn">View Details</button>
             <div id="codeContainer"></div>
+        </div>
+        <div id="detailOverlay">
+            <div id="detailContent">
+                <button id="closeDetailBtn">Close</button>
+                <div id="detailBody"></div>
+            </div>
         </div>
     </div>
     <script>
@@ -177,6 +246,30 @@
         const passwordInput = document.getElementById('passwordInput');
         const loginBtn = document.getElementById('loginBtn');
         const logoutBtn = document.getElementById('logoutBtn');
+        const viewDetailBtn = document.getElementById('viewDetailBtn');
+        const detailOverlay = document.getElementById('detailOverlay');
+        const detailContent = document.getElementById('detailContent');
+        const detailBody = document.getElementById('detailBody');
+        const closeDetailBtn = document.getElementById('closeDetailBtn');
+
+        let currentBookmark = null;
+
+        viewDetailBtn.addEventListener('click', () => {
+            detailBody.innerHTML = '';
+            if (currentBookmark) {
+                const title = document.createElement('h3');
+                title.textContent = currentBookmark.title;
+                detailBody.appendChild(title);
+            }
+            const content = document.createElement('div');
+            content.innerHTML = codeContainer.innerHTML;
+            detailBody.appendChild(content);
+            detailOverlay.style.display = 'flex';
+        });
+
+        closeDetailBtn.addEventListener('click', () => {
+            detailOverlay.style.display = 'none';
+        });
 
         let isAdmin = false;
 
@@ -261,6 +354,8 @@
                 span.textContent = `${timeStr} - ${b.title}`;
                 span.addEventListener('click', () => {
                     videoPlayer.currentTime = b.time;
+                    currentBookmark = b;
+                    codeContainer.innerHTML = marked.parse(b.content || '');
                 });
                 li.appendChild(span);
                 if (isAdmin) {
@@ -339,6 +434,7 @@
                 }
             }
             if (current) {
+                currentBookmark = current;
                 codeContainer.innerHTML = marked.parse(current.content || '');
             }
         });
