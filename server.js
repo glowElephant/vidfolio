@@ -1,3 +1,6 @@
+
+require('dotenv').config();
+
 const express = require('express');
 const session = require('express-session');
 const sqlite3 = require('sqlite3').verbose();
@@ -26,7 +29,7 @@ db.serialize(() => {
   )`);
   db.run(`CREATE TABLE IF NOT EXISTS bookmarks(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    video_id INTEGER,
+    video_id INTEGER,ADMIN_PASSWORD
     time REAL,
     title TEXT,
     content TEXT,
