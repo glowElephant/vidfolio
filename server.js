@@ -77,6 +77,14 @@ app.post('/api/videos', requireAdmin, upload.single('video'), (req, res) => {
   });
 });
 
+app.put('/api/videos/:id', requireAdmin, (req, res) => {
+  const { title } = req.body;
+  db.run('UPDATE videos SET title=? WHERE id=?', [title, req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ ok: true });
+  });
+});
+
 app.get('/video/:filename', (req, res) => {
   const filepath = path.join(__dirname, 'uploads', req.params.filename);
   res.sendFile(filepath);
