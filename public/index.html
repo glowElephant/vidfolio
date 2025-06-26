@@ -102,12 +102,21 @@
             padding: 4px 8px;
             font-size: 12px;
         }
+
+        #auth {
+            margin-bottom: 10px;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div id="container" class="layout">
         <div id="sidebar">
+            <div id="auth">
+                <input type="password" id="passwordInput" placeholder="Admin password" />
+                <button id="loginBtn">Login</button>
+                <button id="logoutBtn" style="display:none">Logout</button>
+            </div>
             <button id="addVideoBtn">Add Video</button>
             <input id="videoFileInput" type="file" accept="video/*" style="display:none" />
             <div id="videoList"></div>
@@ -137,22 +146,54 @@
         const bookmarkTitle = document.getElementById('bookmarkTitle');
         const bookmarkContent = document.getElementById('bookmarkContent');
         const codeContainer = document.getElementById('codeContainer');
+        const passwordInput = document.getElementById('passwordInput');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        let isAdmin = false;
 
         let videos = [];
         let currentVideoIndex = null;
+
+        function updateVisibility() {
+            if (isAdmin) {
+                addVideoBtn.style.display = 'block';
+                bookmarkForm.style.display = 'block';
+                logoutBtn.style.display = 'inline-block';
+                loginBtn.style.display = 'none';
+                passwordInput.style.display = 'none';
+            } else {
+                addVideoBtn.style.display = 'none';
+                bookmarkForm.style.display = 'none';
+                logoutBtn.style.display = 'none';
+                loginBtn.style.display = 'inline-block';
+                passwordInput.style.display = 'inline-block';
+            }
+        }
+
+        function checkAuth() {
+            fetch('/me').then(r => r.json()).then(d => {
+                isAdmin = d.admin;
+                updateVisibility();
+                loadVideos();
+            });
+        }
+
+        function loadVideos() {
+            fetch('/api/videos').then(r => r.json()).then(v => {
+                videos = v.map(x => ({ ...x, url: '/video/' + x.filename, bookmarks: [] }));
+                renderVideoList();
+            });
+        }
 
         function renderVideoList() {
             videoListDiv.innerHTML = '';
             videos.forEach((v, i) => {
                 const div = document.createElement('div');
                 div.className = 'video-item';
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = v.title;
-                input.addEventListener('input', (e) => {
-                    v.title = e.target.value;
-                });
-                div.appendChild(input);
+                const span = document.createElement('span');
+                span.textContent = v.title;
+                div.appendChild(span);
                 div.addEventListener('click', () => loadVideo(i));
                 videoListDiv.appendChild(div);
             });
@@ -168,21 +209,21 @@
                 const timeStr = new Date(b.time * 1000).toISOString().substr(14,5);
                 const span = document.createElement('span');
                 span.textContent = `${timeStr} - ${b.title}`;
-                span.addEventListener('dblclick', () => {
-                    const newTitle = prompt('Edit bookmark title', b.title);
-                    if (newTitle !== null) { b.title = newTitle; renderBookmarkList(); }
-                });
                 span.addEventListener('click', () => {
                     videoPlayer.currentTime = b.time;
                 });
-                const del = document.createElement('button');
-                del.textContent = 'X';
-                del.addEventListener('click', () => {
-                    video.bookmarks.splice(idx,1);
-                    renderBookmarkList();
-                });
                 li.appendChild(span);
-                li.appendChild(del);
+                if (isAdmin) {
+                    const del = document.createElement('button');
+                    del.textContent = 'X';
+                    del.addEventListener('click', () => {
+                        fetch(`/api/bookmarks/${b.id}`, { method: 'DELETE' }).then(() => {
+                            video.bookmarks.splice(idx, 1);
+                            renderBookmarkList();
+                        });
+                    });
+                    li.appendChild(del);
+                }
                 bookmarkList.appendChild(li);
             });
         }
@@ -190,15 +231,15 @@
         function loadVideo(index) {
             currentVideoIndex = index;
             const video = videos[index];
-            if (video.url) {
-                videoPlayer.src = video.url;
-            } else if (video.file) {
-                videoPlayer.src = URL.createObjectURL(video.file);
-            }
-            renderBookmarkList();
+            videoPlayer.src = video.url;
+            fetch(`/api/videos/${video.id}/bookmarks`).then(r => r.json()).then(b => {
+                video.bookmarks = b;
+                renderBookmarkList();
+            });
         }
 
         addVideoBtn.addEventListener('click', () => {
+            if (!isAdmin) return;
             videoFileInput.value = '';
             videoFileInput.click();
         });
@@ -206,24 +247,34 @@
         videoFileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                videos.push({ title: file.name, file, bookmarks: [] });
-                renderVideoList();
+                const fd = new FormData();
+                fd.append('video', file);
+                fd.append('title', file.name);
+                fetch('/api/videos', { method: 'POST', body: fd })
+                    .then(r => r.json())
+                    .then(v => {
+                        videos.push({ ...v, url: '/video/' + v.filename, bookmarks: [] });
+                        renderVideoList();
+                    });
             }
         });
 
         bookmarkForm.addEventListener('submit', (e) => {
             e.preventDefault();
+            if (!isAdmin) return;
             const video = videos[currentVideoIndex];
             if (!video) return;
             const time = videoPlayer.currentTime;
-            video.bookmarks.push({
-                time,
-                title: bookmarkTitle.value,
-                content: bookmarkContent.value
+            fetch(`/api/videos/${video.id}/bookmarks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ time, title: bookmarkTitle.value, content: bookmarkContent.value })
+            }).then(r => r.json()).then(b => {
+                video.bookmarks.push(b);
+                bookmarkTitle.value = '';
+                bookmarkContent.value = '';
+                renderBookmarkList();
             });
-            bookmarkTitle.value = '';
-            bookmarkContent.value = '';
-            renderBookmarkList();
         });
 
         videoPlayer.addEventListener('timeupdate', () => {
@@ -241,6 +292,27 @@
                 codeContainer.innerHTML = marked.parse(current.content || '');
             }
         });
+
+        loginBtn.addEventListener('click', () => {
+            fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'password=' + encodeURIComponent(passwordInput.value)
+            }).then(r => {
+                if (r.ok) {
+                    passwordInput.value = '';
+                    checkAuth();
+                } else {
+                    alert('Login failed');
+                }
+            });
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            fetch('/logout', { method: 'POST' }).then(() => checkAuth());
+        });
+
+        checkAuth();
     </script>
 </body>
 </html>
