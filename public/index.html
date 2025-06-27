@@ -125,6 +125,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 4px;
             padding: 6px;
             border: 1px solid #444;
             border-radius: 4px;
@@ -145,11 +146,19 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 4px;
             padding: 6px;
             border: 1px solid #444;
             border-radius: 4px;
             background: #2b2b2b;
             cursor: pointer;
+        }
+
+        .title-truncate {
+            flex: 1;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
         }
 
         #bookmarkList li:hover {
@@ -340,6 +349,7 @@
                 div.className = 'video-item';
                 const span = document.createElement('span');
                 span.textContent = v.title;
+                span.className = 'title-truncate';
                 div.appendChild(span);
                 if (isAdmin) {
                     const edit = document.createElement('button');
@@ -401,6 +411,7 @@
                 const timeStr = new Date(b.time * 1000).toISOString().substr(14,5);
                 const span = document.createElement('span');
                 span.textContent = `${timeStr} - ${b.title}`;
+                span.className = 'title-truncate';
                 span.addEventListener('click', () => {
                     videoPlayer.currentTime = b.time;
                     currentBookmark = b;
