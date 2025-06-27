@@ -8,7 +8,9 @@ const multer = require('multer');
 const path = require('path');
 
 const app = express();
-const db = new sqlite3.Database('data.db');
+// Store the SQLite database in the same directory as this script so it works
+// regardless of the working directory when the server starts.
+const db = new sqlite3.Database(path.join(__dirname, 'data.db'));
 const upload = multer({ dest: path.join(__dirname, 'uploads') });
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'password';
 
@@ -27,14 +29,36 @@ db.serialize(() => {
     title TEXT,
     filename TEXT
   )`);
-  db.run(`CREATE TABLE IF NOT EXISTS bookmarks(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    video_id INTEGER,
-    time REAL,
-    title TEXT,
-    content TEXT,
-    FOREIGN KEY(video_id) REFERENCES videos(id)
-  )`);
+
+  const createBookmarks = () => {
+    db.run(`CREATE TABLE IF NOT EXISTS bookmarks(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      video_id INTEGER,
+      time REAL,
+      title TEXT,
+      content TEXT,
+      FOREIGN KEY(video_id) REFERENCES videos(id)
+    )`);
+  };
+
+  db.all('PRAGMA table_info(bookmarks)', (err, rows) => {
+    if (err) {
+      console.error('Failed to read bookmarks table info:', err.message);
+      return createBookmarks();
+    }
+    const cols = rows.map(r => r.name);
+    const expected = ['id', 'video_id', 'time', 'title', 'content'];
+    const valid = expected.every(c => cols.includes(c));
+    if (!valid) {
+      console.warn('Recreating bookmarks table with correct schema');
+      db.run('DROP TABLE IF EXISTS bookmarks', recreateErr => {
+        if (recreateErr) console.error(recreateErr.message);
+        createBookmarks();
+      });
+    } else {
+      createBookmarks();
+    }
+  });
 });
 
 app.use(express.static('public'));
