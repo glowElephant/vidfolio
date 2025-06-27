@@ -29,7 +29,7 @@ db.serialize(() => {
   )`);
   db.run(`CREATE TABLE IF NOT EXISTS bookmarks(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    video_id INTEGER,ADMIN_PASSWORD
+    video_id INTEGER,
     time REAL,
     title TEXT,
     content TEXT,
