@@ -1,5 +1,13 @@
 
-require('dotenv').config();
+try {
+  if (require('fs').existsSync('.env')) {
+    require('dotenv').config();
+  } else {
+    console.warn('.env file not found, skipping environment variable loading');
+  }
+} catch (err) {
+  console.warn('dotenv module not found, skipping environment variable loading');
+}
 
 const express = require('express');
 const session = require('express-session');
@@ -29,7 +37,7 @@ db.serialize(() => {
   )`);
   db.run(`CREATE TABLE IF NOT EXISTS bookmarks(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    video_id INTEGER,ADMIN_PASSWORD
+    video_id INTEGER,
     time REAL,
     title TEXT,
     content TEXT,
