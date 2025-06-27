@@ -54,6 +54,28 @@
             box-sizing: border-box;
         }
 
+        #videoWrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        #markerContainer {
+            pointer-events: none;
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 42px;
+            height: 0;
+        }
+
+        .marker {
+            position: absolute;
+            bottom: 0;
+            width: 2px;
+            height: 8px;
+            background: yellow;
+        }
+
         #codeRenderer {
             width: 40%;
             max-width: 480px;
@@ -103,6 +125,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 4px;
             padding: 6px;
             border: 1px solid #444;
             border-radius: 4px;
@@ -123,11 +146,19 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 4px;
             padding: 6px;
             border: 1px solid #444;
             border-radius: 4px;
             background: #2b2b2b;
             cursor: pointer;
+        }
+
+        .title-truncate {
+            flex: 1;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
         }
 
         #bookmarkList li:hover {
@@ -214,7 +245,10 @@
             </div>
         </div>
         <div id="main">
-            <video id="videoPlayer" width="100%" controls></video>
+            <div id="videoWrapper">
+                <video id="videoPlayer" width="100%" controls></video>
+                <div id="markerContainer"></div>
+            </div>
             <form id="bookmarkForm">
                 <input type="text" id="bookmarkTitle" placeholder="Bookmark title" />
                 <textarea id="bookmarkContent" placeholder="Markdown code snippet"></textarea>
@@ -239,6 +273,7 @@
         const videoListDiv = document.getElementById('videoList');
         const bookmarkList = document.getElementById('bookmarkList');
         const videoPlayer = document.getElementById('videoPlayer');
+        const markerContainer = document.getElementById('markerContainer');
         const bookmarkForm = document.getElementById('bookmarkForm');
         const bookmarkTitle = document.getElementById('bookmarkTitle');
         const bookmarkContent = document.getElementById('bookmarkContent');
@@ -314,6 +349,7 @@
                 div.className = 'video-item';
                 const span = document.createElement('span');
                 span.textContent = v.title;
+                span.className = 'title-truncate';
                 div.appendChild(span);
                 if (isAdmin) {
                     const edit = document.createElement('button');
@@ -336,6 +372,29 @@
                         }
                     });
                     div.appendChild(edit);
+
+                    const del = document.createElement('button');
+                    del.textContent = '🗑';
+                    del.style.marginLeft = '5px';
+                    del.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (!confirm('Delete this video?')) return;
+                        fetch(`/api/videos/${v.id}`, { method: 'DELETE' }).then(r => {
+                            if (r.ok) {
+                                videos.splice(i, 1);
+                                if (currentVideoIndex === i) {
+                                    currentVideoIndex = -1;
+                                    videoPlayer.removeAttribute('src');
+                                    videoPlayer.load();
+                                    bookmarkList.innerHTML = '';
+                                    markerContainer.innerHTML = '';
+                                    codeContainer.innerHTML = '';
+                                }
+                                renderVideoList();
+                            }
+                        });
+                    });
+                    div.appendChild(del);
                 }
                 div.addEventListener('click', () => loadVideo(i));
                 videoListDiv.appendChild(div);
@@ -352,6 +411,7 @@
                 const timeStr = new Date(b.time * 1000).toISOString().substr(14,5);
                 const span = document.createElement('span');
                 span.textContent = `${timeStr} - ${b.title}`;
+                span.className = 'title-truncate';
                 span.addEventListener('click', () => {
                     videoPlayer.currentTime = b.time;
                     currentBookmark = b;
@@ -370,6 +430,23 @@
                     li.appendChild(del);
                 }
                 bookmarkList.appendChild(li);
+            });
+            renderMarkers();
+        }
+
+        function renderMarkers() {
+            markerContainer.innerHTML = '';
+            const video = videos[currentVideoIndex];
+            if (!video) return;
+            if (!videoPlayer.duration) {
+                videoPlayer.addEventListener('loadedmetadata', renderMarkers, { once: true });
+                return;
+            }
+            video.bookmarks.forEach(b => {
+                const m = document.createElement('div');
+                m.className = 'marker';
+                m.style.left = (b.time / videoPlayer.duration * 100) + '%';
+                markerContainer.appendChild(m);
             });
         }
 
