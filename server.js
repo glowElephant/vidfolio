@@ -6,6 +6,7 @@ const session = require('express-session');
 const sqlite3 = require('sqlite3').verbose();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 // Store the SQLite database in the same directory as this script so it works
@@ -106,6 +107,24 @@ app.put('/api/videos/:id', requireAdmin, (req, res) => {
   db.run('UPDATE videos SET title=? WHERE id=?', [title, req.params.id], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ ok: true });
+  });
+});
+
+app.delete('/api/videos/:id', requireAdmin, (req, res) => {
+  db.get('SELECT filename FROM videos WHERE id=?', [req.params.id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    const filepath = path.join(__dirname, 'uploads', row.filename);
+    fs.unlink(filepath, unlinkErr => {
+      if (unlinkErr && unlinkErr.code !== 'ENOENT') console.error('Failed to remove file', unlinkErr);
+      db.run('DELETE FROM bookmarks WHERE video_id=?', [req.params.id], err2 => {
+        if (err2) return res.status(500).json({ error: err2.message });
+        db.run('DELETE FROM videos WHERE id=?', [req.params.id], function (err3) {
+          if (err3) return res.status(500).json({ error: err3.message });
+          res.json({ ok: true });
+        });
+      });
+    });
   });
 });
 
