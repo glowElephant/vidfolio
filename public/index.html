@@ -34,12 +34,23 @@
 
         #videoSection, #bookmarkSection {
             flex: 1;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
             padding-right: 4px;
         }
 
         #videoSection {
             border-bottom: 1px solid #333;
+        }
+
+        #videoList {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        #bookmarkList {
+            flex: 1;
+            overflow-y: auto;
         }
 
         hr.divider {
@@ -142,6 +153,20 @@
 
         .video-item:hover {
             background: #333;
+        }
+
+        .drop-indicator {
+            height: 4px;
+            background: #4caf50;
+            margin: 2px 0;
+        }
+
+        .drop-target {
+            background: #333 !important;
+        }
+
+        .drop-inside {
+            outline: 2px dashed #4caf50;
         }
 
         #bookmarkList {
@@ -333,6 +358,51 @@
         let videos = [];
         let categories = [];
         let currentVideoIndex = null;
+        let draggingVideoId = null;
+        let draggingCategoryId = null;
+        const placeholder = document.createElement('div');
+        placeholder.className = 'drop-indicator';
+
+        function clearDragIndicators() {
+            if (placeholder.parentElement) placeholder.remove();
+            document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+            document.querySelectorAll('.drop-inside').forEach(el => el.classList.remove('drop-inside'));
+        }
+
+        function combinedItems(parentId) {
+            const cats = categories.filter(c => c.parent_id === parentId).map(c => ({ type: 'category', obj: c }));
+            const vids = videos.filter(v => v.category_id === parentId).map(v => ({ type: 'video', obj: v }));
+            return [...cats, ...vids].sort((a, b) => (a.obj.position ?? a.obj.id) - (b.obj.position ?? b.obj.id));
+        }
+
+        function updateItem(entry) {
+            const url = entry.type === 'video' ? `/api/videos/${entry.obj.id}` : `/api/categories/${entry.obj.id}`;
+            const body = { position: entry.obj.position };
+            if (entry.type === 'video') body.category_id = entry.obj.category_id; else body.parent_id = entry.obj.parent_id;
+            fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        }
+
+        function reorder(parentId) {
+            const list = combinedItems(parentId);
+            list.forEach((it, idx) => { it.obj.position = idx; updateItem(it); });
+        }
+
+        function moveEntry(entry, newParentId, targetEntry, after) {
+            const oldParent = entry.type === 'video' ? entry.obj.category_id : entry.obj.parent_id;
+            if (entry.type === 'category') newParentId = null;
+            if (entry.type === 'video') entry.obj.category_id = newParentId; else entry.obj.parent_id = newParentId;
+
+            let items = combinedItems(newParentId).filter(e => !(e.type === entry.type && e.obj.id === entry.obj.id));
+            let idx = targetEntry ? items.findIndex(x => x.type === targetEntry.type && x.obj.id === targetEntry.obj.id) : items.length;
+            if (idx < 0) idx = items.length;
+            if (after && targetEntry) idx += 1;
+            items.splice(idx, 0, entry);
+            items.forEach((it, i) => { it.obj.position = i; updateItem(it); });
+
+            if (oldParent !== newParentId) {
+                reorder(oldParent);
+            }
+        }
 
         function updateVisibility() {
             if (isAdmin) {
@@ -363,14 +433,19 @@
 
         function loadVideos() {
             fetch('/api/videos').then(r => r.json()).then(v => {
-                videos = v.map(x => ({ ...x, url: '/video/' + x.filename, bookmarks: [] }));
+                videos = v
+                    .map(x => ({ ...x, url: '/video/' + x.filename, bookmarks: [] }))
+                    .sort((a, b) => (a.position ?? a.id) - (b.position ?? b.id));
                 renderVideoList();
             });
         }
 
         function loadCategories() {
             fetch('/api/categories').then(r => r.json()).then(c => {
-                categories = c.map(x => ({ ...x, collapsed: false }));
+                categories = c
+                    .filter(x => x.parent_id == null)
+                    .map(x => ({ ...x, collapsed: true }))
+                    .sort((a, b) => (a.position ?? a.id) - (b.position ?? b.id));
                 renderVideoList();
             });
         }
@@ -379,182 +454,231 @@
             videoListDiv.innerHTML = '';
 
             function build(parentId, container) {
-                const subCats = categories.filter(c => c.parent_id === parentId);
-                const vids = videos.filter(v => v.category_id === parentId);
+                const items = combinedItems(parentId);
 
-                subCats.forEach(cat => {
-                    const wrap = document.createElement('div');
-                    const header = document.createElement('div');
-                    header.className = 'category-item';
-                    const toggle = document.createElement('span');
-                    toggle.textContent = cat.collapsed ? '▶' : '▼';
-                    toggle.style.cursor = 'pointer';
-                    toggle.addEventListener('click', () => { cat.collapsed = !cat.collapsed; renderVideoList(); });
-                    header.appendChild(toggle);
-
-                    if (isAdmin) {
-                        header.draggable = true;
-                        header.addEventListener('dragstart', e => {
-                            e.dataTransfer.setData('category', cat.id);
-                            e.dataTransfer.setData('text/plain', '');
-                        });
+                container.ondragover = e => {
+                    if (e.target !== container) return;
+                    e.preventDefault();
+                    clearDragIndicators();
+                    container.classList.add('drop-target');
+                    container.appendChild(placeholder);
+                };
+                container.ondrop = e => {
+                    if (e.target !== container) return;
+                    e.preventDefault();
+                    container.classList.remove('drop-target');
+                    if (draggingVideoId) {
+                        const moving = videos.find(v => v.id == draggingVideoId);
+                        moveEntry({ type: 'video', obj: moving }, parentId, null, false);
+                    } else if (draggingCategoryId && parentId == null) {
+                        const moving = categories.find(c => c.id == draggingCategoryId);
+                        moveEntry({ type: 'category', obj: moving }, null, null, false);
                     }
+                    clearDragIndicators();
+                    renderVideoList();
+                };
+                container.addEventListener('dragleave', () => container.classList.remove('drop-target'));
 
-                    const nameSpan = document.createElement('span');
-                    nameSpan.textContent = cat.name;
-                    nameSpan.className = 'title-truncate';
-                    nameSpan.style.marginLeft = '4px';
-                    header.appendChild(nameSpan);
+                items.forEach(item => {
+                    if (item.type === 'category') {
+                        const cat = item.obj;
+                        const wrap = document.createElement('div');
+                        const header = document.createElement('div');
+                        header.className = 'category-item';
+                        header.dataset.id = cat.id;
+                        header.dataset.parent = cat.parent_id;
+                        const toggle = document.createElement('span');
+                        toggle.textContent = cat.collapsed ? '▶' : '▼';
+                        toggle.style.cursor = 'pointer';
+                        toggle.addEventListener('click', () => { cat.collapsed = !cat.collapsed; renderVideoList(); });
+                        header.appendChild(toggle);
 
-                    if (isAdmin) {
-                        const edit = document.createElement('button');
-                        edit.textContent = '✎';
-                        edit.style.marginLeft = '5px';
-                        edit.addEventListener('click', e => {
-                            e.stopPropagation();
-                            const newName = prompt('New name', cat.name);
-                            if (newName && newName !== cat.name) {
-                                fetch(`/api/categories/${cat.id}`, {
-                                    method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ name: newName })
-                                }).then(r => { if (r.ok) { cat.name = newName; renderVideoList(); } });
-                            }
-                        });
-                        header.appendChild(edit);
-
-                        const del = document.createElement('button');
-                        del.textContent = '🗑';
-                        del.style.marginLeft = '5px';
-                        del.addEventListener('click', e => {
-                            e.stopPropagation();
-                            if (!confirm('Delete this category?')) return;
-                            fetch(`/api/categories/${cat.id}`, { method: 'DELETE' }).then(r => {
-                                if (r.ok) {
-                                    categories = categories.filter(c => c.id !== cat.id);
-                                    vids.forEach(v => { if (v.category_id === cat.id) v.category_id = null; });
-                                    renderVideoList();
-                                }
+                        if (isAdmin) {
+                            header.draggable = true;
+                            header.addEventListener('dragstart', e => {
+                                draggingCategoryId = cat.id;
+                                draggingVideoId = null;
+                                e.dataTransfer.setData('text/plain', cat.id);
                             });
-                        });
-                        header.appendChild(del);
-                    }
-
-                    header.addEventListener('dragover', e => e.preventDefault());
-                    header.addEventListener('drop', e => {
-                        e.stopPropagation();
-                        const vid = e.dataTransfer.getData('text/plain');
-                        const catId = e.dataTransfer.getData('category');
-                        if (vid) {
-                            const vobj = videos.find(x => x.id == vid);
-                            if (!vobj) return;
-                            fetch(`/api/videos/${vid}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ category_id: cat.id })
-                            }).then(r => { if (r.ok) { vobj.category_id = cat.id; renderVideoList(); } });
-                        } else if (catId) {
-                            const moving = categories.find(c => c.id == catId);
-                            if (!moving || moving.id === cat.id) return;
-                            fetch(`/api/categories/${catId}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ parent_id: cat.id })
-                            }).then(r => { if (r.ok) { moving.parent_id = cat.id; renderVideoList(); } });
                         }
-                    });
 
-                    wrap.appendChild(header);
-                    container.appendChild(wrap);
+                        const nameSpan = document.createElement('span');
+                        nameSpan.textContent = cat.name;
+                        nameSpan.className = 'title-truncate';
+                        nameSpan.style.marginLeft = '4px';
+                        header.appendChild(nameSpan);
 
-                    if (!cat.collapsed) {
-                        const inner = document.createElement('div');
-                        inner.style.marginLeft = '15px';
-                        build(cat.id, inner);
-                        wrap.appendChild(inner);
-                    }
-                });
-
-                vids.forEach(v => {
-                    const div = document.createElement('div');
-                    div.className = 'video-item';
-                    if (isAdmin) div.draggable = true;
-                    div.addEventListener('dragstart', e => {
-                        e.dataTransfer.setData('text/plain', v.id);
-                    });
-                    const span = document.createElement('span');
-                    span.textContent = v.title;
-                    span.className = 'title-truncate';
-                    div.appendChild(span);
-                    if (isAdmin) {
-                        const edit = document.createElement('button');
-                        edit.textContent = '✎';
-                        edit.style.marginLeft = '5px';
-                        edit.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            const title = prompt('New title', v.title);
-                            if (title && title !== v.title) {
-                                fetch(`/api/videos/${v.id}`, {
-                                    method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ title })
-                                }).then(r => { if (r.ok) { v.title = title; renderVideoList(); } });
-                            }
-                        });
-                        div.appendChild(edit);
-
-                        const del = document.createElement('button');
-                        del.textContent = '🗑';
-                        del.style.marginLeft = '5px';
-                        del.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            if (!confirm('Delete this video?')) return;
-                            fetch(`/api/videos/${v.id}`, { method: 'DELETE' }).then(r => {
-                                if (r.ok) {
-                                    const idx = videos.findIndex(x => x.id === v.id);
-                                    videos.splice(idx, 1);
-                                    if (currentVideoIndex === idx) {
-                                        currentVideoIndex = -1;
-                                        videoPlayer.removeAttribute('src');
-                                        videoPlayer.load();
-                                        bookmarkList.innerHTML = '';
-                                        markerContainer.innerHTML = '';
-                                        codeContainer.innerHTML = '';
-                                    }
-                                    renderVideoList();
+                        if (isAdmin) {
+                            const edit = document.createElement('button');
+                            edit.textContent = '✎';
+                            edit.style.marginLeft = '5px';
+                            edit.addEventListener('click', e => {
+                                e.stopPropagation();
+                                const newName = prompt('New name', cat.name);
+                                if (newName && newName !== cat.name) {
+                                    fetch(`/api/categories/${cat.id}`, {
+                                        method: 'PUT',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ name: newName })
+                                    }).then(r => { if (r.ok) { cat.name = newName; renderVideoList(); } });
                                 }
                             });
+                            header.appendChild(edit);
+
+                            const del = document.createElement('button');
+                            del.textContent = '🗑';
+                            del.style.marginLeft = '5px';
+                            del.addEventListener('click', e => {
+                                e.stopPropagation();
+                                if (!confirm('Delete this category?')) return;
+                                fetch(`/api/categories/${cat.id}`, { method: 'DELETE' }).then(r => {
+                                    if (r.ok) {
+                                        categories = categories.filter(c => c.id !== cat.id);
+                                        videos.forEach(v => { if (v.category_id === cat.id) v.category_id = null; });
+                                        renderVideoList();
+                                    }
+                                });
+                            });
+                            header.appendChild(del);
+                        }
+
+                        header.addEventListener('dragover', e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const y = e.offsetY;
+                            const h = header.offsetHeight / 3;
+                            clearDragIndicators();
+                            if (y < h) {
+                                header.classList.add('drop-target');
+                                header.before(placeholder);
+                            } else if (y > 2 * h) {
+                                header.classList.add('drop-target');
+                                header.after(placeholder);
+                            } else {
+                                header.classList.add('drop-inside');
+                            }
                         });
-                        div.appendChild(del);
+                        header.addEventListener('dragleave', () => { header.classList.remove('drop-target', 'drop-inside'); });
+                        header.addEventListener('drop', e => {
+                            e.stopPropagation();
+                            const y = e.offsetY;
+                            const h = header.offsetHeight / 3;
+                            if (y < h || y > 2 * h) {
+                                const after = y > 2 * h;
+                                if (draggingVideoId) {
+                                    const moving = videos.find(v => v.id == draggingVideoId);
+                                    moveEntry({ type: 'video', obj: moving }, cat.parent_id, { type: 'category', obj: cat }, after);
+                                } else if (draggingCategoryId) {
+                                    const moving = categories.find(c => c.id == draggingCategoryId);
+                                    if (!moving || moving.id === cat.id) return;
+                                    moveEntry({ type: 'category', obj: moving }, null, { type: 'category', obj: cat }, after);
+                                }
+                            } else if (draggingVideoId) {
+                                const moving = videos.find(v => v.id == draggingVideoId);
+                                cat.collapsed = false;
+                                moveEntry({ type: 'video', obj: moving }, cat.id, null, false);
+                            }
+                            clearDragIndicators();
+                            renderVideoList();
+                        });
+
+                        wrap.appendChild(header);
+                        container.appendChild(wrap);
+
+                        if (!cat.collapsed) {
+                            const inner = document.createElement('div');
+                            inner.style.marginLeft = '15px';
+                            build(cat.id, inner);
+                            wrap.appendChild(inner);
+                        }
+                    } else {
+                        const v = item.obj;
+                        const div = document.createElement('div');
+                        div.className = 'video-item';
+                        div.dataset.id = v.id;
+                        div.dataset.cat = v.category_id;
+                        if (isAdmin) div.draggable = true;
+                        div.addEventListener('dragstart', e => {
+                            draggingVideoId = v.id;
+                            draggingCategoryId = null;
+                            e.dataTransfer.setData('text/plain', v.id);
+                        });
+                        const span = document.createElement('span');
+                        span.textContent = v.title;
+                        span.className = 'title-truncate';
+                        div.appendChild(span);
+                        if (isAdmin) {
+                            const edit = document.createElement('button');
+                            edit.textContent = '✎';
+                            edit.style.marginLeft = '5px';
+                            edit.addEventListener('click', e => {
+                                e.stopPropagation();
+                                const title = prompt('New title', v.title);
+                                if (title && title !== v.title) {
+                                    fetch(`/api/videos/${v.id}`, {
+                                        method: 'PUT',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ title })
+                                    }).then(r => { if (r.ok) { v.title = title; renderVideoList(); } });
+                                }
+                            });
+                            div.appendChild(edit);
+
+                            const del = document.createElement('button');
+                            del.textContent = '🗑';
+                            del.style.marginLeft = '5px';
+                            del.addEventListener('click', e => {
+                                e.stopPropagation();
+                                if (!confirm('Delete this video?')) return;
+                                fetch(`/api/videos/${v.id}`, { method: 'DELETE' }).then(r => {
+                                    if (r.ok) {
+                                        const idx = videos.findIndex(x => x.id === v.id);
+                                        videos.splice(idx, 1);
+                                        if (currentVideoIndex === idx) {
+                                            currentVideoIndex = -1;
+                                            videoPlayer.removeAttribute('src');
+                                            videoPlayer.load();
+                                            bookmarkList.innerHTML = '';
+                                            markerContainer.innerHTML = '';
+                                            codeContainer.innerHTML = '';
+                                        }
+                                        renderVideoList();
+                                    }
+                                });
+                            });
+                            div.appendChild(del);
+                        }
+                        div.addEventListener('dragover', e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const after = e.offsetY > div.offsetHeight / 2;
+                            clearDragIndicators();
+                            div.classList.add('drop-target');
+                            if (after) div.after(placeholder); else div.before(placeholder);
+                        });
+                        div.addEventListener('dragleave', () => div.classList.remove('drop-target'));
+                        div.addEventListener('drop', e => {
+                            e.stopPropagation();
+                            const after = e.offsetY > div.offsetHeight / 2;
+                            if (draggingVideoId) {
+                                const moving = videos.find(x => x.id === draggingVideoId);
+                                if (!moving || moving.id === v.id) { clearDragIndicators(); return; }
+                                moveEntry({ type: 'video', obj: moving }, v.category_id, { type: 'video', obj: v }, after);
+                            } else if (draggingCategoryId && v.category_id == null) {
+                                const moving = categories.find(c => c.id == draggingCategoryId);
+                                if (!moving) return;
+                                moveEntry({ type: 'category', obj: moving }, null, { type: 'video', obj: v }, after);
+                            }
+                            clearDragIndicators();
+                            renderVideoList();
+                        });
+                        div.addEventListener('click', () => loadVideo(videos.findIndex(x => x.id === v.id)));
+                        container.appendChild(div);
                     }
-                    div.addEventListener('click', () => loadVideo(videos.findIndex(x => x.id === v.id)));
-                    container.appendChild(div);
                 });
             }
 
             build(null, videoListDiv);
-            videoListDiv.ondragover = e => e.preventDefault();
-            videoListDiv.ondrop = e => {
-                const vid = e.dataTransfer.getData('text/plain');
-                const catId = e.dataTransfer.getData('category');
-                if (vid) {
-                    const vobj = videos.find(x => x.id == vid);
-                    if (!vobj) return;
-                    fetch(`/api/videos/${vid}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ category_id: null })
-                    }).then(r => { if (r.ok) { vobj.category_id = null; renderVideoList(); } });
-                } else if (catId) {
-                    const moving = categories.find(c => c.id == catId);
-                    if (!moving) return;
-                    fetch(`/api/categories/${catId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ parent_id: null })
-                    }).then(r => { if (r.ok) { moving.parent_id = null; renderVideoList(); } });
-                }
-            };
         }
 
         function renderBookmarkList() {
@@ -631,7 +755,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name })
             }).then(r => r.json()).then(c => {
-                categories.push({ ...c, collapsed: false });
+                categories.push({ ...c, collapsed: true });
                 renderVideoList();
             });
         });
@@ -703,6 +827,12 @@
 
         logoutBtn.addEventListener('click', () => {
             fetch('/logout', { method: 'POST' }).then(() => checkAuth());
+        });
+
+        document.addEventListener('dragend', () => {
+            draggingVideoId = null;
+            draggingCategoryId = null;
+            clearDragIndicators();
         });
 
         checkAuth();
