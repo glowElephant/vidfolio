@@ -430,6 +430,7 @@
 
                     header.addEventListener('dragover', e => e.preventDefault());
                     header.addEventListener('drop', e => {
+                        e.stopPropagation();
                         const vid = e.dataTransfer.getData('text/plain');
                         const catId = e.dataTransfer.getData('category');
                         if (vid) {
