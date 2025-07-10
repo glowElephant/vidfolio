@@ -144,6 +144,16 @@
             background: #333;
         }
 
+        .drop-indicator {
+            height: 4px;
+            background: #4caf50;
+            margin: 2px 0;
+        }
+
+        .drop-target {
+            background: #333 !important;
+        }
+
         #bookmarkList {
             padding: 0;
         }
@@ -335,6 +345,13 @@
         let currentVideoIndex = null;
         let draggingVideoId = null;
         let draggingCategoryId = null;
+        const placeholder = document.createElement('div');
+        placeholder.className = 'drop-indicator';
+
+        function clearDragIndicators() {
+            if (placeholder.parentElement) placeholder.remove();
+            document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+        }
 
         function updateVisibility() {
             if (isAdmin) {
@@ -375,7 +392,7 @@
         function loadCategories() {
             fetch('/api/categories').then(r => r.json()).then(c => {
                 categories = c
-                    .map(x => ({ ...x, collapsed: false }))
+                    .map(x => ({ ...x, collapsed: true }))
                     .sort((a, b) => (a.position ?? a.id) - (b.position ?? b.id));
                 renderVideoList();
             });
@@ -396,6 +413,8 @@
                     const wrap = document.createElement('div');
                     const header = document.createElement('div');
                     header.className = 'category-item';
+                    header.dataset.id = cat.id;
+                    header.dataset.parent = cat.parent_id;
                     const toggle = document.createElement('span');
                     toggle.textContent = cat.collapsed ? '▶' : '▼';
                     toggle.style.cursor = 'pointer';
@@ -452,7 +471,17 @@
                         header.appendChild(del);
                     }
 
-                    header.addEventListener('dragover', e => e.preventDefault());
+                    header.addEventListener('dragover', e => {
+                        e.preventDefault();
+                        const after = e.offsetY > header.offsetHeight / 2;
+                        clearDragIndicators();
+                        header.classList.add('drop-target');
+                        placeholder.dataset.type = 'category';
+                        placeholder.dataset.after = after;
+                        placeholder.dataset.target = cat.id;
+                        if (after) header.after(placeholder); else header.before(placeholder);
+                    });
+                    header.addEventListener('dragleave', () => header.classList.remove('drop-target'));
                     header.addEventListener('drop', e => {
                         e.stopPropagation();
                         const vid = draggingVideoId;
@@ -470,9 +499,10 @@
                             if (!moving || moving.id === cat.id) return;
                             if (moving.parent_id === cat.parent_id) {
                                 const siblings = categories.filter(x => x.parent_id === cat.parent_id && x.id !== catId);
-                                const targetIndex = siblings.findIndex(x => x.id === cat.id);
-                                siblings.splice(targetIndex, 0, moving);
-                                siblings.forEach((x, idx) => { x.position = idx; });
+                                const idx = siblings.findIndex(x => x.id === cat.id);
+                                const insertIndex = idx + (placeholder.dataset.after === 'true' ? 1 : 0);
+                                siblings.splice(insertIndex, 0, moving);
+                                siblings.forEach((x, i) => { x.position = i; });
                                 fetch('/api/categories/reorder', {
                                     method: 'PUT',
                                     headers: { 'Content-Type': 'application/json' },
@@ -487,6 +517,7 @@
                                 }).then(r => { if (r.ok) { moving.parent_id = cat.id; renderVideoList(); } });
                             }
                         }
+                        clearDragIndicators();
                     });
 
                     wrap.appendChild(header);
@@ -503,6 +534,8 @@
                 vids.forEach(v => {
                     const div = document.createElement('div');
                     div.className = 'video-item';
+                    div.dataset.id = v.id;
+                    div.dataset.cat = v.category_id;
                     if (isAdmin) div.draggable = true;
                     div.addEventListener('dragstart', e => {
                         draggingVideoId = v.id;
@@ -554,19 +587,30 @@
                         });
                         div.appendChild(del);
                     }
-                    div.addEventListener('dragover', e => e.preventDefault());
+                    div.addEventListener('dragover', e => {
+                        e.preventDefault();
+                        const after = e.offsetY > div.offsetHeight / 2;
+                        clearDragIndicators();
+                        div.classList.add('drop-target');
+                        placeholder.dataset.type = 'video';
+                        placeholder.dataset.after = after;
+                        placeholder.dataset.target = v.id;
+                        if (after) div.after(placeholder); else div.before(placeholder);
+                    });
+                    div.addEventListener('dragleave', () => div.classList.remove('drop-target'));
                     div.addEventListener('drop', e => {
                         e.stopPropagation();
                         const vid = draggingVideoId;
-                        if (!vid || vid === v.id) return;
+                        if (!vid || vid === v.id) { clearDragIndicators(); return; }
                         const moving = videos.find(x => x.id === vid);
-                        if (!moving) return;
+                        if (!moving) { clearDragIndicators(); return; }
                         const targetCat = v.category_id;
                         const fromCat = moving.category_id;
                         moving.category_id = targetCat;
                         const ordered = videos.filter(x => x.category_id === targetCat && x.id !== vid);
-                        const targetIndex = ordered.findIndex(x => x.id === v.id);
-                        ordered.splice(targetIndex, 0, moving);
+                        const idx = ordered.findIndex(x => x.id === v.id);
+                        const insertIndex = idx + (placeholder.dataset.after === 'true' ? 1 : 0);
+                        ordered.splice(insertIndex, 0, moving);
                         ordered.forEach((x, idx) => { x.position = idx; });
                         fetch('/api/videos/reorder', {
                             method: 'PUT',
@@ -587,6 +631,7 @@
                                 body: JSON.stringify({ ids: oldArr.map(x => x.id) })
                             });
                         }
+                        clearDragIndicators();
                         renderVideoList();
                     });
                     div.addEventListener('click', () => loadVideo(videos.findIndex(x => x.id === v.id)));
@@ -616,6 +661,7 @@
                         body: JSON.stringify({ parent_id: null })
                     }).then(r => { if (r.ok) { moving.parent_id = null; renderVideoList(); } });
                 }
+                clearDragIndicators();
             };
         }
 
@@ -693,7 +739,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name })
             }).then(r => r.json()).then(c => {
-                categories.push({ ...c, collapsed: false });
+                categories.push({ ...c, collapsed: true });
                 renderVideoList();
             });
         });
@@ -770,6 +816,7 @@
         document.addEventListener('dragend', () => {
             draggingVideoId = null;
             draggingCategoryId = null;
+            clearDragIndicators();
         });
 
         checkAuth();
