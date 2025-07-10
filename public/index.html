@@ -34,12 +34,23 @@
 
         #videoSection, #bookmarkSection {
             flex: 1;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
             padding-right: 4px;
         }
 
         #videoSection {
             border-bottom: 1px solid #333;
+        }
+
+        #videoList {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        #bookmarkList {
+            flex: 1;
+            overflow-y: auto;
         }
 
         hr.divider {
@@ -373,6 +384,7 @@
 
         function moveEntry(entry, newParentId, targetEntry, after) {
             const oldParent = entry.type === 'video' ? entry.obj.category_id : entry.obj.parent_id;
+            if (entry.type === 'category') newParentId = null;
             if (entry.type === 'video') entry.obj.category_id = newParentId; else entry.obj.parent_id = newParentId;
 
             let items = combinedItems(newParentId).filter(e => !(e.type === entry.type && e.obj.id === entry.obj.id));
@@ -426,6 +438,7 @@
         function loadCategories() {
             fetch('/api/categories').then(r => r.json()).then(c => {
                 categories = c
+                    .filter(x => x.parent_id == null)
                     .map(x => ({ ...x, collapsed: true }))
                     .sort((a, b) => (a.position ?? a.id) - (b.position ?? b.id));
                 renderVideoList();
@@ -439,18 +452,20 @@
                 const items = combinedItems(parentId);
 
                 container.ondragover = e => {
+                    if (e.target !== container) return;
                     e.preventDefault();
                     clearDragIndicators();
                     container.appendChild(placeholder);
                 };
                 container.ondrop = e => {
+                    if (e.target !== container) return;
                     e.preventDefault();
                     if (draggingVideoId) {
                         const moving = videos.find(v => v.id == draggingVideoId);
                         moveEntry({ type: 'video', obj: moving }, parentId, null, false);
-                    } else if (draggingCategoryId) {
+                    } else if (draggingCategoryId && parentId == null) {
                         const moving = categories.find(c => c.id == draggingCategoryId);
-                        moveEntry({ type: 'category', obj: moving }, parentId, null, false);
+                        moveEntry({ type: 'category', obj: moving }, null, null, false);
                     }
                     clearDragIndicators();
                     renderVideoList();
@@ -521,6 +536,7 @@
 
                         header.addEventListener('dragover', e => {
                             e.preventDefault();
+                            e.stopPropagation();
                             const after = e.offsetY > header.offsetHeight / 2;
                             clearDragIndicators();
                             header.classList.add('drop-target');
@@ -536,7 +552,7 @@
                             } else if (draggingCategoryId) {
                                 const moving = categories.find(c => c.id == draggingCategoryId);
                                 if (!moving || moving.id === cat.id) return;
-                                moveEntry({ type: 'category', obj: moving }, cat.parent_id, { type: 'category', obj: cat }, after);
+                                moveEntry({ type: 'category', obj: moving }, null, { type: 'category', obj: cat }, after);
                             }
                             clearDragIndicators();
                             renderVideoList();
@@ -610,6 +626,7 @@
                         }
                         div.addEventListener('dragover', e => {
                             e.preventDefault();
+                            e.stopPropagation();
                             const after = e.offsetY > div.offsetHeight / 2;
                             clearDragIndicators();
                             div.classList.add('drop-target');
@@ -623,10 +640,10 @@
                                 const moving = videos.find(x => x.id === draggingVideoId);
                                 if (!moving || moving.id === v.id) { clearDragIndicators(); return; }
                                 moveEntry({ type: 'video', obj: moving }, v.category_id, { type: 'video', obj: v }, after);
-                            } else if (draggingCategoryId) {
+                            } else if (draggingCategoryId && v.category_id == null) {
                                 const moving = categories.find(c => c.id == draggingCategoryId);
                                 if (!moving) return;
-                                moveEntry({ type: 'category', obj: moving }, v.category_id, { type: 'video', obj: v }, after);
+                                moveEntry({ type: 'category', obj: moving }, null, { type: 'video', obj: v }, after);
                             }
                             clearDragIndicators();
                             renderVideoList();
