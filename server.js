@@ -31,6 +31,20 @@ db.serialize(() => {
     filename TEXT
   )`);
 
+  db.run(`CREATE TABLE IF NOT EXISTS categories(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    parent_id INTEGER
+  )`);
+
+  db.all('PRAGMA table_info(videos)', (err, rows) => {
+    if (err) return console.error('Failed to read videos table info:', err.message);
+    const cols = rows.map(r => r.name);
+    if (!cols.includes('category_id')) {
+      db.run('ALTER TABLE videos ADD COLUMN category_id INTEGER');
+    }
+  });
+
   const createBookmarks = () => {
     db.run(`CREATE TABLE IF NOT EXISTS bookmarks(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,7 +101,7 @@ const requireAdmin = (req, res, next) => {
 };
 
 app.get('/api/videos', (req, res) => {
-  db.all('SELECT id,title,filename FROM videos', [], (err, rows) => {
+  db.all('SELECT id,title,filename,category_id FROM videos', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
@@ -96,15 +110,28 @@ app.get('/api/videos', (req, res) => {
 app.post('/api/videos', requireAdmin, upload.single('video'), (req, res) => {
   const title = req.body.title || req.file.originalname;
   const filename = req.file.filename;
-  db.run('INSERT INTO videos(title,filename) VALUES(?,?)', [title, filename], function (err) {
+  const categoryId = req.body.category_id || null;
+  db.run('INSERT INTO videos(title,filename,category_id) VALUES(?,?,?)', [title, filename, categoryId], function (err) {
     if (err) return res.status(500).json({ error: err.message });
-    res.json({ id: this.lastID, title, filename });
+    res.json({ id: this.lastID, title, filename, category_id: categoryId });
   });
 });
 
 app.put('/api/videos/:id', requireAdmin, (req, res) => {
-  const { title } = req.body;
-  db.run('UPDATE videos SET title=? WHERE id=?', [title, req.params.id], function (err) {
+  const { title, category_id } = req.body;
+  const fields = [];
+  const params = [];
+  if (title !== undefined) {
+    fields.push('title=?');
+    params.push(title);
+  }
+  if (category_id !== undefined) {
+    fields.push('category_id=?');
+    params.push(category_id);
+  }
+  if (!fields.length) return res.json({ ok: true });
+  params.push(req.params.id);
+  db.run(`UPDATE videos SET ${fields.join(', ')} WHERE id=?`, params, function (err) {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ ok: true });
   });
@@ -124,6 +151,48 @@ app.delete('/api/videos/:id', requireAdmin, (req, res) => {
           res.json({ ok: true });
         });
       });
+    });
+  });
+});
+
+// category APIs
+app.get('/api/categories', (req, res) => {
+  db.all('SELECT id,name,parent_id FROM categories', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post('/api/categories', requireAdmin, (req, res) => {
+  const { name, parent_id } = req.body;
+  db.run('INSERT INTO categories(name,parent_id) VALUES(?,?)', [name, parent_id || null], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ id: this.lastID, name, parent_id: parent_id || null });
+  });
+});
+
+app.put('/api/categories/:id', requireAdmin, (req, res) => {
+  const { name, parent_id } = req.body;
+  const fields = [];
+  const params = [];
+  if (name !== undefined) { fields.push('name=?'); params.push(name); }
+  if (parent_id !== undefined) { fields.push('parent_id=?'); params.push(parent_id); }
+  if (!fields.length) return res.json({ ok: true });
+  params.push(req.params.id);
+  db.run(`UPDATE categories SET ${fields.join(', ')} WHERE id=?`, params, function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ ok: true });
+  });
+});
+
+app.delete('/api/categories/:id', requireAdmin, (req, res) => {
+  const id = req.params.id;
+  db.serialize(() => {
+    db.run('UPDATE videos SET category_id=NULL WHERE category_id=?', [id]);
+    db.run('UPDATE categories SET parent_id=NULL WHERE parent_id=?', [id]);
+    db.run('DELETE FROM categories WHERE id=?', [id], function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ ok: true });
     });
   });
 });
