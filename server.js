@@ -34,14 +34,28 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS categories(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
-    parent_id INTEGER
+    parent_id INTEGER,
+    position INTEGER
   )`);
+
+  db.all('PRAGMA table_info(categories)', (err, rows) => {
+    if (err) return console.error('Failed to read categories table info:', err.message);
+    const cols = rows.map(r => r.name);
+    if (!cols.includes('position')) {
+      db.run('ALTER TABLE categories ADD COLUMN position INTEGER');
+      db.run('UPDATE categories SET position = id');
+    }
+  });
 
   db.all('PRAGMA table_info(videos)', (err, rows) => {
     if (err) return console.error('Failed to read videos table info:', err.message);
     const cols = rows.map(r => r.name);
     if (!cols.includes('category_id')) {
       db.run('ALTER TABLE videos ADD COLUMN category_id INTEGER');
+    }
+    if (!cols.includes('position')) {
+      db.run('ALTER TABLE videos ADD COLUMN position INTEGER');
+      db.run('UPDATE videos SET position = id');
     }
   });
 
@@ -101,7 +115,7 @@ const requireAdmin = (req, res, next) => {
 };
 
 app.get('/api/videos', (req, res) => {
-  db.all('SELECT id,title,filename,category_id FROM videos', [], (err, rows) => {
+  db.all('SELECT id,title,filename,category_id,position FROM videos ORDER BY position', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
@@ -111,14 +125,16 @@ app.post('/api/videos', requireAdmin, upload.single('video'), (req, res) => {
   const title = req.body.title || req.file.originalname;
   const filename = req.file.filename;
   const categoryId = req.body.category_id || null;
-  db.run('INSERT INTO videos(title,filename,category_id) VALUES(?,?,?)', [title, filename, categoryId], function (err) {
+  db.run('INSERT INTO videos(title,filename,category_id,position) VALUES(?,?,?,NULL)', [title, filename, categoryId], function (err) {
     if (err) return res.status(500).json({ error: err.message });
-    res.json({ id: this.lastID, title, filename, category_id: categoryId });
+    const id = this.lastID;
+    db.run('UPDATE videos SET position=? WHERE id=?', [id, id]);
+    res.json({ id, title, filename, category_id: categoryId, position: id });
   });
 });
 
 app.put('/api/videos/:id', requireAdmin, (req, res) => {
-  const { title, category_id } = req.body;
+  const { title, category_id, position } = req.body;
   const fields = [];
   const params = [];
   if (title !== undefined) {
@@ -128,6 +144,10 @@ app.put('/api/videos/:id', requireAdmin, (req, res) => {
   if (category_id !== undefined) {
     fields.push('category_id=?');
     params.push(category_id);
+  }
+  if (position !== undefined) {
+    fields.push('position=?');
+    params.push(position);
   }
   if (!fields.length) return res.json({ ok: true });
   params.push(req.params.id);
@@ -157,7 +177,7 @@ app.delete('/api/videos/:id', requireAdmin, (req, res) => {
 
 // category APIs
 app.get('/api/categories', (req, res) => {
-  db.all('SELECT id,name,parent_id FROM categories', [], (err, rows) => {
+  db.all('SELECT id,name,parent_id,position FROM categories ORDER BY position', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
@@ -165,18 +185,21 @@ app.get('/api/categories', (req, res) => {
 
 app.post('/api/categories', requireAdmin, (req, res) => {
   const { name, parent_id } = req.body;
-  db.run('INSERT INTO categories(name,parent_id) VALUES(?,?)', [name, parent_id || null], function (err) {
+  db.run('INSERT INTO categories(name,parent_id,position) VALUES(?,?,NULL)', [name, parent_id || null], function (err) {
     if (err) return res.status(500).json({ error: err.message });
-    res.json({ id: this.lastID, name, parent_id: parent_id || null });
+    const id = this.lastID;
+    db.run('UPDATE categories SET position=? WHERE id=?', [id, id]);
+    res.json({ id, name, parent_id: parent_id || null, position: id });
   });
 });
 
 app.put('/api/categories/:id', requireAdmin, (req, res) => {
-  const { name, parent_id } = req.body;
+  const { name, parent_id, position } = req.body;
   const fields = [];
   const params = [];
   if (name !== undefined) { fields.push('name=?'); params.push(name); }
   if (parent_id !== undefined) { fields.push('parent_id=?'); params.push(parent_id); }
+  if (position !== undefined) { fields.push('position=?'); params.push(position); }
   if (!fields.length) return res.json({ ok: true });
   params.push(req.params.id);
   db.run(`UPDATE categories SET ${fields.join(', ')} WHERE id=?`, params, function (err) {
@@ -194,6 +217,28 @@ app.delete('/api/categories/:id', requireAdmin, (req, res) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ ok: true });
     });
+  });
+});
+
+app.put('/api/videos/reorder', requireAdmin, (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids required' });
+  db.serialize(() => {
+    ids.forEach((id, idx) => {
+      db.run('UPDATE videos SET position=? WHERE id=?', [idx, id]);
+    });
+    res.json({ ok: true });
+  });
+});
+
+app.put('/api/categories/reorder', requireAdmin, (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids required' });
+  db.serialize(() => {
+    ids.forEach((id, idx) => {
+      db.run('UPDATE categories SET position=? WHERE id=?', [idx, id]);
+    });
+    res.json({ ok: true });
   });
 });
 
