@@ -333,6 +333,8 @@
         let videos = [];
         let categories = [];
         let currentVideoIndex = null;
+        let draggingVideoId = null;
+        let draggingCategoryId = null;
 
         function updateVisibility() {
             if (isAdmin) {
@@ -363,14 +365,18 @@
 
         function loadVideos() {
             fetch('/api/videos').then(r => r.json()).then(v => {
-                videos = v.map(x => ({ ...x, url: '/video/' + x.filename, bookmarks: [] }));
+                videos = v
+                    .map(x => ({ ...x, url: '/video/' + x.filename, bookmarks: [] }))
+                    .sort((a, b) => (a.position ?? a.id) - (b.position ?? b.id));
                 renderVideoList();
             });
         }
 
         function loadCategories() {
             fetch('/api/categories').then(r => r.json()).then(c => {
-                categories = c.map(x => ({ ...x, collapsed: false }));
+                categories = c
+                    .map(x => ({ ...x, collapsed: false }))
+                    .sort((a, b) => (a.position ?? a.id) - (b.position ?? b.id));
                 renderVideoList();
             });
         }
@@ -379,8 +385,12 @@
             videoListDiv.innerHTML = '';
 
             function build(parentId, container) {
-                const subCats = categories.filter(c => c.parent_id === parentId);
-                const vids = videos.filter(v => v.category_id === parentId);
+                const subCats = categories
+                    .filter(c => c.parent_id === parentId)
+                    .sort((a, b) => (a.position ?? a.id) - (b.position ?? b.id));
+                const vids = videos
+                    .filter(v => v.category_id === parentId)
+                    .sort((a, b) => (a.position ?? a.id) - (b.position ?? b.id));
 
                 subCats.forEach(cat => {
                     const wrap = document.createElement('div');
@@ -395,6 +405,8 @@
                     if (isAdmin) {
                         header.draggable = true;
                         header.addEventListener('dragstart', e => {
+                            draggingCategoryId = cat.id;
+                            draggingVideoId = null;
                             e.dataTransfer.setData('category', cat.id);
                             e.dataTransfer.setData('text/plain', '');
                         });
@@ -443,8 +455,8 @@
                     header.addEventListener('dragover', e => e.preventDefault());
                     header.addEventListener('drop', e => {
                         e.stopPropagation();
-                        const vid = e.dataTransfer.getData('text/plain');
-                        const catId = e.dataTransfer.getData('category');
+                        const vid = draggingVideoId;
+                        const catId = draggingCategoryId;
                         if (vid) {
                             const vobj = videos.find(x => x.id == vid);
                             if (!vobj) return;
@@ -456,11 +468,24 @@
                         } else if (catId) {
                             const moving = categories.find(c => c.id == catId);
                             if (!moving || moving.id === cat.id) return;
-                            fetch(`/api/categories/${catId}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ parent_id: cat.id })
-                            }).then(r => { if (r.ok) { moving.parent_id = cat.id; renderVideoList(); } });
+                            if (moving.parent_id === cat.parent_id) {
+                                const siblings = categories.filter(x => x.parent_id === cat.parent_id && x.id !== catId);
+                                const targetIndex = siblings.findIndex(x => x.id === cat.id);
+                                siblings.splice(targetIndex, 0, moving);
+                                siblings.forEach((x, idx) => { x.position = idx; });
+                                fetch('/api/categories/reorder', {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ ids: siblings.map(x => x.id) })
+                                });
+                                renderVideoList();
+                            } else {
+                                fetch(`/api/categories/${catId}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ parent_id: cat.id })
+                                }).then(r => { if (r.ok) { moving.parent_id = cat.id; renderVideoList(); } });
+                            }
                         }
                     });
 
@@ -480,6 +505,8 @@
                     div.className = 'video-item';
                     if (isAdmin) div.draggable = true;
                     div.addEventListener('dragstart', e => {
+                        draggingVideoId = v.id;
+                        draggingCategoryId = null;
                         e.dataTransfer.setData('text/plain', v.id);
                     });
                     const span = document.createElement('span');
@@ -527,6 +554,41 @@
                         });
                         div.appendChild(del);
                     }
+                    div.addEventListener('dragover', e => e.preventDefault());
+                    div.addEventListener('drop', e => {
+                        e.stopPropagation();
+                        const vid = draggingVideoId;
+                        if (!vid || vid === v.id) return;
+                        const moving = videos.find(x => x.id === vid);
+                        if (!moving) return;
+                        const targetCat = v.category_id;
+                        const fromCat = moving.category_id;
+                        moving.category_id = targetCat;
+                        const ordered = videos.filter(x => x.category_id === targetCat && x.id !== vid);
+                        const targetIndex = ordered.findIndex(x => x.id === v.id);
+                        ordered.splice(targetIndex, 0, moving);
+                        ordered.forEach((x, idx) => { x.position = idx; });
+                        fetch('/api/videos/reorder', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ids: ordered.map(x => x.id) })
+                        });
+                        if (fromCat !== targetCat) {
+                            fetch(`/api/videos/${vid}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ category_id: targetCat })
+                            });
+                            const oldArr = videos.filter(x => x.category_id === fromCat && x.id !== vid);
+                            oldArr.forEach((x, idx) => { x.position = idx; });
+                            fetch('/api/videos/reorder', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ ids: oldArr.map(x => x.id) })
+                            });
+                        }
+                        renderVideoList();
+                    });
                     div.addEventListener('click', () => loadVideo(videos.findIndex(x => x.id === v.id)));
                     container.appendChild(div);
                 });
@@ -535,8 +597,8 @@
             build(null, videoListDiv);
             videoListDiv.ondragover = e => e.preventDefault();
             videoListDiv.ondrop = e => {
-                const vid = e.dataTransfer.getData('text/plain');
-                const catId = e.dataTransfer.getData('category');
+                const vid = draggingVideoId;
+                const catId = draggingCategoryId;
                 if (vid) {
                     const vobj = videos.find(x => x.id == vid);
                     if (!vobj) return;
@@ -703,6 +765,11 @@
 
         logoutBtn.addEventListener('click', () => {
             fetch('/logout', { method: 'POST' }).then(() => checkAuth());
+        });
+
+        document.addEventListener('dragend', () => {
+            draggingVideoId = null;
+            draggingCategoryId = null;
         });
 
         checkAuth();
