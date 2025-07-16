@@ -733,6 +733,9 @@
         function loadVideo(index) {
             currentVideoIndex = index;
             const video = videos[index];
+            videoPlayer.pause();
+            videoPlayer.removeAttribute('src');
+            videoPlayer.load();      // abort current download
             videoPlayer.src = video.url;
             fetch(`/api/videos/${video.id}/bookmarks`).then(r => r.json()).then(b => {
                 video.bookmarks = b;
