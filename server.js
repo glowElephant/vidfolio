@@ -244,6 +244,7 @@ app.put('/api/categories/reorder', requireAdmin, (req, res) => {
 
 app.get('/video/:filename', (req, res) => {
   const filepath = path.join(__dirname, 'uploads', req.params.filename);
+  res.set('Cache-Control', 'public, max-age=86400');
   res.sendFile(filepath);
 });
 
