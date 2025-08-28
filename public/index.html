@@ -345,6 +345,7 @@
         }
 
         let currentBookmark = null;
+        let currentFetchController = null;
 
         viewDetailBtn.addEventListener('click', () => {
             detailBody.innerHTML = '';
@@ -749,47 +750,49 @@
             });
         }
 
-        function loadVideo(index) {
+        async function loadVideo(index) {
             currentVideoIndex = index;
             const video = videos[index];
             videoPlayer.pause();
             videoPlayer.removeAttribute('src');
-            videoPlayer.load();      // abort current download
-            fetch(`/api/videos/${video.id}/bookmarks`).then(r => r.json()).then(b => {
+            videoPlayer.load();
+            if (currentFetchController) currentFetchController.abort();
+            const controller = new AbortController();
+            currentFetchController = controller;
+            try {
+                const bookmarkRes = await fetch(`/api/videos/${video.id}/bookmarks`, { signal: controller.signal });
+                const b = await bookmarkRes.json();
+                if (currentFetchController !== controller) return;
                 video.bookmarks = b;
                 renderBookmarkList();
                 downloadProgress.style.display = 'block';
                 downloadProgress.value = 0;
-                fetch(video.url).then(response => {
-                    const contentLength = +response.headers.get('Content-Length') || 0;
-                    const reader = response.body.getReader();
-                    let received = 0;
-                    return new ReadableStream({
-                        start(controller) {
-                            function read() {
-                                reader.read().then(({ done, value }) => {
-                                    if (done) {
-                                        controller.close();
-                                        downloadProgress.style.display = 'none';
-                                        return;
-                                    }
-                                    received += value.length;
-                                    if (contentLength) {
-                                        downloadProgress.value = received / contentLength;
-                                    }
-                                    controller.enqueue(value);
-                                    read();
-                                });
-                            }
-                            read();
-                        }
-                    });
-                }).then(stream => new Response(stream))
-                  .then(res => res.blob())
-                  .then(blob => {
-                      videoPlayer.src = URL.createObjectURL(blob);
-                  });
-            });
+                const response = await fetch(video.url, { signal: controller.signal });
+                const contentLength = +response.headers.get('Content-Length') || 0;
+                const reader = response.body.getReader();
+                const chunks = [];
+                let received = 0;
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                    received += value.length;
+                    if (contentLength) {
+                        downloadProgress.value = received / contentLength;
+                    }
+                }
+                downloadProgress.style.display = 'none';
+                if (currentFetchController !== controller) return;
+                const blob = new Blob(chunks);
+                videoPlayer.src = URL.createObjectURL(blob);
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error(err);
+                }
+                if (currentFetchController === controller) {
+                    downloadProgress.style.display = 'none';
+                }
+            }
         }
 
         addVideoBtn.addEventListener('click', () => {
