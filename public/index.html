@@ -45,12 +45,12 @@
 
         #videoList {
             flex: 1;
-            overflow-y: auto;
+            overflow-y: scroll;
         }
 
         #bookmarkList {
             flex: 1;
-            overflow-y: auto;
+            overflow-y: scroll;
         }
 
         hr.divider {
@@ -206,6 +206,7 @@
 
         #auth {
             margin-bottom: 10px;
+            display: none;
         }
 
         #viewDetailBtn {
@@ -271,6 +272,7 @@
     <div id="container" class="layout">
         <div id="sidebar">
             <div id="controls">
+                <button id="adminToggleBtn">Admin</button>
                 <div id="auth">
                     <input type="password" id="passwordInput" placeholder="Admin password" />
                     <button id="loginBtn">Login</button>
@@ -295,6 +297,7 @@
                 <video id="videoPlayer" width="100%" controls></video>
                 <div id="markerContainer"></div>
             </div>
+            <progress id="downloadProgress" value="0" max="1" style="display:none; width:100%;"></progress>
             <form id="bookmarkForm">
                 <input type="text" id="bookmarkTitle" placeholder="Bookmark title" />
                 <textarea id="bookmarkContent" placeholder="Markdown code snippet"></textarea>
@@ -328,11 +331,18 @@
         const passwordInput = document.getElementById('passwordInput');
         const loginBtn = document.getElementById('loginBtn');
         const logoutBtn = document.getElementById('logoutBtn');
+        const adminToggleBtn = document.getElementById('adminToggleBtn');
+        const authDiv = document.getElementById('auth');
         const viewDetailBtn = document.getElementById('viewDetailBtn');
         const detailOverlay = document.getElementById('detailOverlay');
         const detailContent = document.getElementById('detailContent');
         const detailBody = document.getElementById('detailBody');
         const closeDetailBtn = document.getElementById('closeDetailBtn');
+        const downloadProgress = document.getElementById('downloadProgress');
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js');
+        }
 
         let currentBookmark = null;
 
@@ -351,6 +361,11 @@
 
         closeDetailBtn.addEventListener('click', () => {
             detailOverlay.style.display = 'none';
+        });
+
+        adminToggleBtn.addEventListener('click', () => {
+            authDiv.style.display = 'block';
+            adminToggleBtn.style.display = 'none';
         });
 
         let isAdmin = false;
@@ -412,6 +427,8 @@
                 logoutBtn.style.display = 'inline-block';
                 loginBtn.style.display = 'none';
                 passwordInput.style.display = 'none';
+                authDiv.style.display = 'block';
+                adminToggleBtn.style.display = 'none';
             } else {
                 addVideoBtn.style.display = 'none';
                 addCategoryBtn.style.display = 'none';
@@ -419,6 +436,8 @@
                 logoutBtn.style.display = 'none';
                 loginBtn.style.display = 'inline-block';
                 passwordInput.style.display = 'inline-block';
+                authDiv.style.display = 'none';
+                adminToggleBtn.style.display = 'block';
             }
         }
 
@@ -736,10 +755,40 @@
             videoPlayer.pause();
             videoPlayer.removeAttribute('src');
             videoPlayer.load();      // abort current download
-            videoPlayer.src = video.url;
             fetch(`/api/videos/${video.id}/bookmarks`).then(r => r.json()).then(b => {
                 video.bookmarks = b;
                 renderBookmarkList();
+                downloadProgress.style.display = 'block';
+                downloadProgress.value = 0;
+                fetch(video.url).then(response => {
+                    const contentLength = +response.headers.get('Content-Length') || 0;
+                    const reader = response.body.getReader();
+                    let received = 0;
+                    return new ReadableStream({
+                        start(controller) {
+                            function read() {
+                                reader.read().then(({ done, value }) => {
+                                    if (done) {
+                                        controller.close();
+                                        downloadProgress.style.display = 'none';
+                                        return;
+                                    }
+                                    received += value.length;
+                                    if (contentLength) {
+                                        downloadProgress.value = received / contentLength;
+                                    }
+                                    controller.enqueue(value);
+                                    read();
+                                });
+                            }
+                            read();
+                        }
+                    });
+                }).then(stream => new Response(stream))
+                  .then(res => res.blob())
+                  .then(blob => {
+                      videoPlayer.src = URL.createObjectURL(blob);
+                  });
             });
         }
 
