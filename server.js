@@ -8,7 +8,7 @@ const publicDir = path.resolve(__dirname, 'public');
 // OpenClaw Gateway config
 const OC_HOST = '127.0.0.1';
 const OC_PORT = 18789;
-const OC_TOKEN = 'REMOVED_SECRET';
+const OC_TOKEN = process.env.OC_TOKEN || '';
 const OC_AGENT = 'main';
 
 // Portfolio assistant system prompt (injected for web chat only)
@@ -151,7 +151,7 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 // Discord webhook for contact notifications
-const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || 'REMOVED_SECRET';
+const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || '';
 
 async function sendDiscordNotification(contact) {
   if (!DISCORD_WEBHOOK) return;
