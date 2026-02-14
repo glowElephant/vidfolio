@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skills | 장한아</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=3">
+</head>
+<body>
+  <canvas id="particle-canvas"></canvas>
+  <div class="page-transition"></div>
+
+  <nav class="nav">
+    <a href="/" class="nav-logo"><span class="prompt">$</span> glowElephant</a>
+    <ul class="nav-links">
+      <li><a href="/">~/home</a></li>
+      <li><a href="/about">~/about</a></li>
+      <li><a href="/skills">~/skills</a></li>
+      <li><a href="/projects">~/projects</a></li>
+      <li><a href="/career">~/career</a></li>
+      <li><a href="/chat">~/chat</a></li>
+    </ul>
+    <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  </nav>
+
+  <main>
+    <div class="container">
+      <div class="terminal fade-in">
+        <div class="terminal-header">
+          <div class="terminal-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
+          <div class="terminal-title">Skills — 8 years of experience</div>
+        </div>
+        <div class="terminal-body">
+
+          <div class="skill-category">
+            <div class="skill-category-title">// Game Engine & Graphics</div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">Unity 3D/2D</span><span class="skill-level">LV.95 (8yr)</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar green" data-level="95"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">OpenGL / DirectX</span><span class="skill-level">LV.40</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar green" data-level="40"></div></div>
+            </div>
+          </div>
+
+          <div class="skill-category">
+            <div class="skill-category-title">// Languages</div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">C#</span><span class="skill-level">LV.95</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar green" data-level="95"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">Python</span><span class="skill-level">LV.80</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar blue" data-level="80"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">TypeScript / JS</span><span class="skill-level">LV.75</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar yellow" data-level="75"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">C / C++</span><span class="skill-level">LV.50</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar orange" data-level="50"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">Dart</span><span class="skill-level">LV.70</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar cyan" data-level="70"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">Lua</span><span class="skill-level">LV.55</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar purple" data-level="55"></div></div>
+            </div>
+          </div>
+
+          <div class="skill-category">
+            <div class="skill-category-title">// Mobile & Frameworks</div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">Flutter</span><span class="skill-level">LV.75</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar cyan" data-level="75"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">Android / iOS</span><span class="skill-level">LV.60</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar green" data-level="60"></div></div>
+            </div>
+          </div>
+
+          <div class="skill-category">
+            <div class="skill-category-title">// Architecture & Patterns</div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">MVVM (UniRx)</span><span class="skill-level">LV.85</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar purple" data-level="85"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">VContainer (DI)</span><span class="skill-level">LV.75</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar purple" data-level="75"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">WebSocket / REST</span><span class="skill-level">LV.80</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar blue" data-level="80"></div></div>
+            </div>
+          </div>
+
+          <div class="skill-category">
+            <div class="skill-category-title">// XR & Digital Twin</div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">AR (ARCore/ARKit)</span><span class="skill-level">LV.70</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar orange" data-level="70"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">Digital Twin / VLsdk</span><span class="skill-level">LV.65</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar orange" data-level="65"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">XREAL Glasses</span><span class="skill-level">LV.55</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar orange" data-level="55"></div></div>
+            </div>
+          </div>
+
+          <div class="skill-category">
+            <div class="skill-category-title">// AI & Generative</div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">AI/LLM Integration</span><span class="skill-level">LV.80</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar purple" data-level="80"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">Gen AI Pipeline</span><span class="skill-level">LV.75</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar purple" data-level="75"></div></div>
+            </div>
+          </div>
+
+          <div class="skill-category">
+            <div class="skill-category-title">// DevOps & Automation</div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">CI/CD (GameCI)</span><span class="skill-level">LV.75</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar orange" data-level="75"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">Docker</span><span class="skill-level">LV.60</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar blue" data-level="60"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">Jenkins / GH Actions</span><span class="skill-level">LV.70</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar orange" data-level="70"></div></div>
+            </div>
+          </div>
+
+          <div class="skill-category">
+            <div class="skill-category-title">// Backend & Tools</div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">Node.js / Flask</span><span class="skill-level">LV.65</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar yellow" data-level="65"></div></div>
+            </div>
+            <div class="skill-item">
+              <div class="skill-info"><span class="skill-name">Redis</span><span class="skill-level">LV.45</span></div>
+              <div class="skill-bar-bg"><div class="skill-bar yellow" data-level="45"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="terminal fade-in">
+        <div class="terminal-header">
+          <div class="terminal-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
+          <div class="terminal-title">Toolbox — 45 tools</div>
+        </div>
+        <div class="terminal-body">
+
+          <div class="tool-group fade-in" data-color="purple">
+            <div class="tool-group-header">
+              <span class="tool-group-icon"></span>
+              <span class="tool-group-title">AI & Generative</span>
+              <span class="tool-group-count">13</span>
+            </div>
+            <div class="tool-tags">
+              <span class="tool-tag">OpenAI API</span>
+              <span class="tool-tag">Claude / Claude Code</span>
+              <span class="tool-tag">Gemini</span>
+              <span class="tool-tag">OpenClaw</span>
+              <span class="tool-tag">Midjourney</span>
+              <span class="tool-tag">Flux</span>
+              <span class="tool-tag">Kling AI</span>
+              <span class="tool-tag">D-ID</span>
+              <span class="tool-tag">HeyGen</span>
+              <span class="tool-tag">Applio</span>
+              <span class="tool-tag">ComfyUI</span>
+              <span class="tool-tag">NotebookLM</span>
+              <span class="tool-tag">Hailuo AI</span>
+            </div>
+          </div>
+
+          <div class="tool-group fade-in" data-color="green">
+            <div class="tool-group-header">
+              <span class="tool-group-icon"></span>
+              <span class="tool-group-title">Game & Engine</span>
+              <span class="tool-group-count">7</span>
+            </div>
+            <div class="tool-tags">
+              <span class="tool-tag">Unity 3D/2D</span>
+              <span class="tool-tag">Unity Editor Extensions</span>
+              <span class="tool-tag">Addressable</span>
+              <span class="tool-tag">UniRx</span>
+              <span class="tool-tag">VContainer</span>
+              <span class="tool-tag">Corona (Lua)</span>
+              <span class="tool-tag">Gamespark</span>
+            </div>
+          </div>
+
+          <div class="tool-group fade-in" data-color="orange">
+            <div class="tool-group-header">
+              <span class="tool-group-icon"></span>
+              <span class="tool-group-title">DevOps & Build</span>
+              <span class="tool-group-count">8</span>
+            </div>
+            <div class="tool-tags">
+              <span class="tool-tag">Git / GitHub</span>
+              <span class="tool-tag">GitHub Actions</span>
+              <span class="tool-tag">Game CI</span>
+              <span class="tool-tag">Jenkins</span>
+              <span class="tool-tag">Docker</span>
+              <span class="tool-tag">Cloudflare</span>
+              <span class="tool-tag">Android Studio</span>
+              <span class="tool-tag">XCode</span>
+            </div>
+          </div>
+
+          <div class="tool-group fade-in" data-color="yellow">
+            <div class="tool-group-header">
+              <span class="tool-group-icon"></span>
+              <span class="tool-group-title">Development</span>
+              <span class="tool-group-count">11</span>
+            </div>
+            <div class="tool-tags">
+              <span class="tool-tag">VS Code</span>
+              <span class="tool-tag">tmux</span>
+              <span class="tool-tag">Node.js</span>
+              <span class="tool-tag">Flask</span>
+              <span class="tool-tag">Redis</span>
+              <span class="tool-tag">Puppeteer</span>
+              <span class="tool-tag">FFmpeg</span>
+              <span class="tool-tag">Postman</span>
+              <span class="tool-tag">Figma</span>
+              <span class="tool-tag">Streamlit</span>
+              <span class="tool-tag">Ollama</span>
+            </div>
+          </div>
+
+          <div class="tool-group fade-in" data-color="blue">
+            <div class="tool-group-header">
+              <span class="tool-group-icon"></span>
+              <span class="tool-group-title">Platform & SDK</span>
+              <span class="tool-group-count">6</span>
+            </div>
+            <div class="tool-tags">
+              <span class="tool-tag">Naver ARCeye VLsdk</span>
+              <span class="tool-tag">XREAL SDK</span>
+              <span class="tool-tag">ARCore / ARKit</span>
+              <span class="tool-tag">Google Admob</span>
+              <span class="tool-tag">IAP</span>
+              <span class="tool-tag">WebGL</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p class="footer-msg">$ echo "Let's build something together."</p>
+    <p>&copy; 2025 장한아 | glowElephant</p>
+  </footer>
+
+  <script src="/js/particles.js"></script>
+  <script src="/js/nav.js"></script>
+  <script src="/js/animations.js"></script>
+</body>
+</html>

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat | 장한아</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=3">
+</head>
+<body>
+  <canvas id="particle-canvas"></canvas>
+  <div class="page-transition"></div>
+
+  <nav class="nav">
+    <a href="/" class="nav-logo"><span class="prompt">$</span> glowElephant</a>
+    <ul class="nav-links">
+      <li><a href="/">~/home</a></li>
+      <li><a href="/about">~/about</a></li>
+      <li><a href="/skills">~/skills</a></li>
+      <li><a href="/projects">~/projects</a></li>
+      <li><a href="/career">~/career</a></li>
+      <li><a href="/chat">~/chat</a></li>
+    </ul>
+    <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  </nav>
+
+  <main class="chat-main">
+    <div class="chat-container">
+
+      <div class="chat-header">
+        <div class="chat-avatar">gE</div>
+        <div class="chat-header-info">
+          <div class="chat-header-name">glowElephant Assistant</div>
+          <div class="chat-header-status">
+            <span class="chat-status-dot"></span>
+            <span id="chat-status-text">Online</span>
+          </div>
+        </div>
+        <button class="chat-clear-btn" id="clearChat" title="Clear chat">Clear</button>
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-welcome">
+          <div class="chat-welcome-icon">gE</div>
+          <h3>glowElephant Assistant</h3>
+          <p>장한아에 대해 궁금한 점을 물어보세요.</p>
+          <p class="chat-welcome-dim">경력, 기술 스택, 프로젝트, 협업 문의 등</p>
+          <div class="chat-suggestions">
+            <button class="chat-suggestion" data-msg="어떤 기술 스택을 사용하나요?">기술 스택</button>
+            <button class="chat-suggestion" data-msg="주요 프로젝트를 소개해주세요">프로젝트 소개</button>
+            <button class="chat-suggestion" data-msg="외주 개발 가능한가요?">외주 문의</button>
+            <button class="chat-suggestion" data-msg="경력이 어떻게 되나요?">경력 소개</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <textarea id="chatInput" placeholder="메시지를 입력하세요..." rows="1"></textarea>
+        <button id="chatSend" class="chat-send-btn" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="/js/particles.js"></script>
+  <script src="/js/nav.js"></script>
+  <script>
+  (function() {
+    const SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
+    const messagesEl = document.getElementById('chatMessages');
+    const inputEl = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('chatSend');
+    const clearBtn = document.getElementById('clearChat');
+    const statusText = document.getElementById('chat-status-text');
+    let isStreaming = false;
+
+    // Session management
+    function getSession() {
+      const stored = localStorage.getItem('chat_session');
+      if (stored) {
+        const s = JSON.parse(stored);
+        if (Date.now() - s.created < SESSION_TTL) return s;
+      }
+      const session = {
+        id: 'visitor_' + Math.random().toString(36).slice(2) + '_' + Date.now(),
+        created: Date.now(),
+        messages: []
+      };
+      localStorage.setItem('chat_session', JSON.stringify(session));
+      return session;
+    }
+
+    function saveSession(session) {
+      localStorage.setItem('chat_session', JSON.stringify(session));
+    }
+
+    let session = getSession();
+
+    // Restore previous messages
+    if (session.messages.length > 0) {
+      document.querySelector('.chat-welcome').style.display = 'none';
+      session.messages.forEach(m => appendMessage(m.role, m.content, false));
+    }
+
+    // Auto-resize textarea
+    inputEl.addEventListener('input', () => {
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+      sendBtn.disabled = !inputEl.value.trim();
+    });
+
+    // Send on Enter (Shift+Enter for newline)
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!isStreaming && inputEl.value.trim()) sendMessage();
+      }
+    });
+
+    sendBtn.addEventListener('click', () => {
+      if (!isStreaming && inputEl.value.trim()) sendMessage();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      session = {
+        id: 'visitor_' + Math.random().toString(36).slice(2) + '_' + Date.now(),
+        created: Date.now(),
+        messages: []
+      };
+      saveSession(session);
+      messagesEl.innerHTML = `
+        <div class="chat-welcome">
+          <div class="chat-welcome-icon">gE</div>
+          <h3>glowElephant Assistant</h3>
+          <p>장한아에 대해 궁금한 점을 물어보세요.</p>
+          <p class="chat-welcome-dim">경력, 기술 스택, 프로젝트, 협업 문의 등</p>
+          <div class="chat-suggestions">
+            <button class="chat-suggestion" data-msg="어떤 기술 스택을 사용하나요?">기술 스택</button>
+            <button class="chat-suggestion" data-msg="주요 프로젝트를 소개해주세요">프로젝트 소개</button>
+            <button class="chat-suggestion" data-msg="외주 개발 가능한가요?">외주 문의</button>
+            <button class="chat-suggestion" data-msg="경력이 어떻게 되나요?">경력 소개</button>
+          </div>
+        </div>`;
+      bindSuggestions();
+    });
+
+    // Suggestion buttons
+    function bindSuggestions() {
+      document.querySelectorAll('.chat-suggestion').forEach(btn => {
+        btn.addEventListener('click', () => {
+          inputEl.value = btn.dataset.msg;
+          sendBtn.disabled = false;
+          sendMessage();
+        });
+      });
+    }
+    bindSuggestions();
+
+    function appendMessage(role, content, save = true) {
+      const div = document.createElement('div');
+      div.className = `chat-msg chat-msg-${role}`;
+
+      if (role === 'assistant') {
+        div.innerHTML = `<div class="chat-msg-avatar">gE</div><div class="chat-msg-bubble">${formatContent(content)}</div>`;
+      } else {
+        div.innerHTML = `<div class="chat-msg-bubble">${escapeHtml(content)}</div>`;
+      }
+
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+
+      if (save) {
+        session.messages.push({ role, content });
+        saveSession(session);
+      }
+      return div;
+    }
+
+    function formatContent(text) {
+      // Strip CONTACT tags from visible output
+      text = text.replace(/<!--CONTACT:.*?-->/g, '');
+      // Basic markdown: bold, code, links
+      return escapeHtml(text)
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/`(.*?)`/g, '<code>$1</code>')
+        .replace(/\n/g, '<br>');
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function sendMessage() {
+      const text = inputEl.value.trim();
+      if (!text || isStreaming) return;
+
+      // Hide welcome
+      const welcome = document.querySelector('.chat-welcome');
+      if (welcome) welcome.style.display = 'none';
+
+      appendMessage('user', text);
+      inputEl.value = '';
+      inputEl.style.height = 'auto';
+      sendBtn.disabled = true;
+      isStreaming = true;
+      statusText.textContent = 'Typing...';
+
+      // Create assistant message placeholder
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'chat-msg chat-msg-assistant';
+      msgDiv.innerHTML = '<div class="chat-msg-avatar">gE</div><div class="chat-msg-bubble"><span class="chat-typing-indicator"><span></span><span></span><span></span></span></div>';
+      messagesEl.appendChild(msgDiv);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      const bubble = msgDiv.querySelector('.chat-msg-bubble');
+
+      try {
+        const apiMessages = session.messages.map(m => ({ role: m.role, content: m.content }));
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: apiMessages, sessionId: session.id })
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          bubble.innerHTML = `<span class="chat-error">${err.error || 'Error occurred'}</span>`;
+          isStreaming = false;
+          statusText.textContent = 'Online';
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullContent = '';
+        bubble.innerHTML = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            if (line === 'data: [DONE]') continue;
+            try {
+              const json = JSON.parse(line.slice(6));
+              const delta = json.choices?.[0]?.delta?.content;
+              if (delta) {
+                fullContent += delta;
+                bubble.innerHTML = formatContent(fullContent);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+              }
+            } catch (e) {}
+          }
+        }
+
+        // Save assistant message
+        session.messages.push({ role: 'assistant', content: fullContent });
+        saveSession(session);
+
+      } catch (err) {
+        bubble.innerHTML = '<span class="chat-error">AI 어시스턴트에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.</span>';
+      }
+
+      isStreaming = false;
+      statusText.textContent = 'Online';
+    }
+  })();
+  </script>
+</body>
+</html>

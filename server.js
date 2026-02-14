@@ -1,284 +1,299 @@
-
-require('dotenv').config();
-
 const express = require('express');
-const session = require('express-session');
-const sqlite3 = require('sqlite3').verbose();
-const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const http = require('http');
 
 const app = express();
-// Store the SQLite database in the same directory as this script so it works
-// regardless of the working directory when the server starts.
-const db = new sqlite3.Database(path.join(__dirname, 'data.db'));
-const upload = multer({ dest: path.join(__dirname, 'uploads') });
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'password';
+const publicDir = path.resolve(__dirname, 'public');
+
+// OpenClaw Gateway config
+const OC_HOST = '127.0.0.1';
+const OC_PORT = 18789;
+const OC_TOKEN = 'REMOVED_SECRET';
+const OC_AGENT = 'main';
+
+// Portfolio assistant system prompt (injected for web chat only)
+// Discord uses 봄's SOUL.md from the default workspace
+const PORTFOLIO_SYSTEM_PROMPT = `# Portfolio Assistant - glowElephant
+
+## Role
+장한아(glowElephant)의 포트폴리오 사이트 방문자를 응대하는 AI 어시스턴트.
+친근하고 전문적인 톤으로 대화하며, 장한아에 대한 정보를 알려주고,
+채용/외주 문의가 있으면 연결해준다.
+
+## About 장한아
+- 8년차 Unity 개발자, Product Builder
+- 현재 (주)스마트프로 재직 (Unity Developer / Digital Twin)
+- 철학: "기술을 쓸 줄 아는가보다, 문제를 풀 수 있는가"
+- AI를 적극 활용하여 생산성을 극대화하는 개발자
+
+### 주요 기술 스택
+- Engine: Unity 3D/2D (8년), OpenGL/DirectX
+- Languages: C# (전문), Python, TypeScript/JS, Dart, Lua, C/C++
+- Mobile: Flutter, Android/iOS 네이티브
+- Architecture: MVVM (UniRx), VContainer DI, WebSocket/REST
+- XR: AR (ARCore/ARKit), Naver ARCeye VLsdk, XREAL Glasses, Digital Twin
+- AI: OpenAI API, Claude, Gemini, Midjourney, Flux, D-ID, HeyGen, Applio, ComfyUI
+- DevOps: CI/CD (GameCI, Jenkins), GitHub Actions, Docker
+
+### 경력 요약
+1. (주) 스마트프로 (2026.01~현재) — Digital Twin, VTS 기반 프로젝트, 원전 시설 시스템
+2. (주) 하이퍼클라우드 (2025.10~2026.01) — 코엑스 실내 AR 내비게이션, CI/CD 구축, 빌드시간 70% 단축
+3. (주) 두부 (2022.12~2025.06) — 아동 발달 앱(두부팡, 마리트임), AI 파이프라인 구축, 사내 컨퍼런스 리딩
+4. (주) 뉴웨이블 (2022.05~2022.12) — TCG P2E 게임(슈퍼콜라), UniRx MVVM
+5. (주) 모히또게임즈 (2020.02~2022.04) — Comix Breaker(출시), HeroBall Z, Jenkins CI/CD
+6. (주) 조니웍스 (2017.11~2020.02) — DigWorld(출시), DigStar(출시), 풀스택 개발
+
+### 출시 게임/서비스
+- 두부팡 (디지털 치료 앱)
+- 마리트임 (Flutter+Unity 하이브리드)
+- 코믹스브레이커 (TCG 로그라이크)
+- 디그월드 / 디그스타 (P2E 모바일)
+
+### 주요 프로젝트
+- AI_Language — AI 에이전트 간 통신 효율을 위한 압축 언어 프로토콜
+- morning-cast — OpenClaw + NotebookLM 아침 뉴스 브리핑 자동화
+- PDF_TO_VIDEO — PDF → 요약 → 나레이션 영상 자동 생성
+- PixelCrawler — Puppeteer 기반 웹 스냅샷 CLI 도구
+- COEX AR Navigation — Naver VLsdk 기반 실내 AR 내비게이션
+
+### 강점
+- AI를 도구로 활용하여 비용 80~90% 절감 실적
+- 반복작업 발견 시 Tool 제작을 우선순위로 고려
+- 비개발직군 대상 멘토링 & 기술 공유 문화 주도
+- 다양한 부서와의 협업, 빠른 적응력
+
+## 공개 가능 정보
+- 위에 작성된 모든 경력, 기술, 프로젝트 정보
+- GitHub: github.com/glowElephant
+- 포트폴리오: glowelephant.site
+- 이메일: gksdk1029@gmail.com (공개된 이메일)
+- 작업 스타일, 협업 방식, 개발 철학
+
+## 절대 비공개 (물어봐도 알려주지 않기)
+- 연봉, 급여, 희망 연봉
+- 개인 전화번호, 집 주소
+- 현 직장 내부 프로젝트의 NDA 관련 상세 내용
+- 가족 개인정보
+- 이직 의향 (직접적으로 답하지 않기, "직접 이야기하시는 게 좋을 것 같습니다" 안내)
+
+## 채용/외주 문의 처리
+방문자가 채용, 외주, 프로젝트 협업, 미팅 요청 등을 하면:
+1. 관심을 가져주셔서 감사하다고 인사
+2. 어떤 프로젝트/포지션인지 자세히 파악
+3. 연락받을 이름과 이메일(또는 연락처)을 요청
+4. 정보를 받으면 "한아님께 바로 전달해드리겠습니다!" 안내
+5. 응답 마지막에 반드시 다음 형식의 태그를 포함:
+   <!--CONTACT:{"name":"방문자이름","email":"이메일","company":"회사명","message":"요약"}-->
+이 태그는 시스템이 자동으로 감지하여 장한아에게 디스코드로 알림을 보낸다.
+
+## 대화 스타일
+- 기본 한국어, 영어로 질문하면 영어로 답변
+- 친근하지만 전문적 (반말X, 존댓말 사용)
+- 답변은 2~3문장 이내로 최대한 짧게. 이모지 최소화 (1개 이하)
+- 질문에 직접 답하고, 관련 없는 추가 설명/부연 절대 금지
+- 장한아를 3인칭으로 지칭 ("한아님은...", "장한아 님은...")
+- 모르는 것은 모른다고 솔직하게 말하기
+
+## 중요 제한사항
+- 이 챗봇의 목적은 오직 장한아(glowElephant)에 대한 정보 제공과 채용/외주 문의 연결
+- 퀴즈, 게임, 잡담, 농담, 창작 등 포트폴리오와 무관한 요청은 정중히 거절
+- "저는 한아님의 포트폴리오 어시스턴트라 그런 건 도와드리기 어려워요. 한아님에 대해 궁금한 점 있으시면 물어봐주세요!" 로 안내
+- 목록, 리스트, 번호매기기 등 긴 형식 지양. 짧은 문장으로 답변`;
+
+// Rate limiting (per IP, 20 requests per minute)
+const rateMap = new Map();
+const RATE_LIMIT = 20;
+const RATE_WINDOW = 60 * 1000;
+
+// Daily limits
+const dailyMap = new Map();       // per IP daily count
+const DAILY_PER_IP = 15;          // 1인당 하루 15회
+const DAILY_GLOBAL_MAX = 200;     // 전체 하루 200회
+let dailyGlobalCount = 0;
+let dailyResetDate = new Date().toDateString();
+
+function checkRate(ip) {
+  const now = Date.now();
+  const entry = rateMap.get(ip);
+  if (!entry || now - entry.start > RATE_WINDOW) {
+    rateMap.set(ip, { start: now, count: 1 });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= RATE_LIMIT;
+}
+
+function checkDailyLimit(ip) {
+  const today = new Date().toDateString();
+  // Reset all counts at midnight
+  if (today !== dailyResetDate) {
+    dailyMap.clear();
+    dailyGlobalCount = 0;
+    dailyResetDate = today;
+  }
+  // Global limit
+  if (dailyGlobalCount >= DAILY_GLOBAL_MAX) return 'global';
+  // Per IP limit
+  const ipCount = dailyMap.get(ip) || 0;
+  if (ipCount >= DAILY_PER_IP) return 'ip';
+  // OK - increment
+  dailyMap.set(ip, ipCount + 1);
+  dailyGlobalCount++;
+  return null;
+}
+
+// Clean up rate map every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateMap) {
+    if (now - entry.start > RATE_WINDOW) rateMap.delete(ip);
+  }
+}, 5 * 60 * 1000);
+
+// Discord webhook for contact notifications
+const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || 'REMOVED_SECRET';
+
+async function sendDiscordNotification(contact) {
+  if (!DISCORD_WEBHOOK) return;
+  try {
+    const body = JSON.stringify({
+      content: `**Portfolio Contact**\nName: ${contact.name || 'N/A'}\nEmail: ${contact.email || 'N/A'}\nCompany: ${contact.company || 'N/A'}\nMessage: ${contact.message || 'N/A'}`
+    });
+    const url = new URL(DISCORD_WEBHOOK);
+    const options = {
+      hostname: url.hostname,
+      path: url.pathname,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    };
+    const req = require('https').request(options);
+    req.write(body);
+    req.end();
+  } catch (e) {
+    console.error('Discord webhook error:', e.message);
+  }
+}
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'secret',
-  resave: false,
-  saveUninitialized: false
-}));
+app.use(express.static(publicDir));
 
-// initialize tables
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS videos(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    filename TEXT
-  )`);
+// Chat API proxy → OpenClaw Gateway
+app.post('/api/chat', (req, res) => {
+  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  if (!checkRate(clientIp)) {
+    return res.status(429).json({ error: 'Too many requests. Please wait a moment.' });
+  }
+  const dailyBlock = checkDailyLimit(clientIp);
+  if (dailyBlock === 'ip') {
+    return res.status(429).json({ error: '오늘 대화 횟수를 모두 사용했어요. 내일 다시 이용해주세요!' });
+  }
+  if (dailyBlock === 'global') {
+    return res.status(429).json({ error: '오늘 전체 이용량이 초과되었어요. 내일 다시 이용해주세요!' });
+  }
 
-  db.run(`CREATE TABLE IF NOT EXISTS categories(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    parent_id INTEGER,
-    position INTEGER
-  )`);
+  const { messages, sessionId } = req.body;
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: 'messages required' });
+  }
 
-  db.all('PRAGMA table_info(categories)', (err, rows) => {
-    if (err) return console.error('Failed to read categories table info:', err.message);
-    const cols = rows.map(r => r.name);
-    if (!cols.includes('position')) {
-      db.run('ALTER TABLE categories ADD COLUMN position INTEGER');
-      db.run('UPDATE categories SET position = id');
-    }
+  // Limit message history sent to API (last 20 messages)
+  const trimmed = messages.slice(-20);
+
+  // Prepend portfolio system prompt for web chat visitors
+  // (Discord uses 봄's SOUL.md from the default workspace)
+  const chatMessages = [
+    { role: 'system', content: PORTFOLIO_SYSTEM_PROMPT },
+    ...trimmed
+  ];
+
+  const payload = JSON.stringify({
+    model: `openclaw:${OC_AGENT}`,
+    stream: true,
+    max_tokens: 400,
+    user: sessionId || 'anonymous',
+    messages: chatMessages
   });
 
-  db.all('PRAGMA table_info(videos)', (err, rows) => {
-    if (err) return console.error('Failed to read videos table info:', err.message);
-    const cols = rows.map(r => r.name);
-    if (!cols.includes('category_id')) {
-      db.run('ALTER TABLE videos ADD COLUMN category_id INTEGER');
+  const options = {
+    hostname: OC_HOST,
+    port: OC_PORT,
+    path: '/v1/chat/completions',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OC_TOKEN}`,
+      'x-openclaw-agent-id': OC_AGENT,
+      'Content-Length': Buffer.byteLength(payload)
     }
-    if (!cols.includes('position')) {
-      db.run('ALTER TABLE videos ADD COLUMN position INTEGER');
-      db.run('UPDATE videos SET position = id');
-    }
-  });
-
-  const createBookmarks = () => {
-    db.run(`CREATE TABLE IF NOT EXISTS bookmarks(
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      video_id INTEGER,
-      time REAL,
-      title TEXT,
-      content TEXT,
-      FOREIGN KEY(video_id) REFERENCES videos(id)
-    )`);
   };
 
-  db.all('PRAGMA table_info(bookmarks)', (err, rows) => {
-    if (err) {
-      console.error('Failed to read bookmarks table info:', err.message);
-      return createBookmarks();
-    }
-    const cols = rows.map(r => r.name);
-    const expected = ['id', 'video_id', 'time', 'title', 'content'];
-    const valid = expected.every(c => cols.includes(c));
-    if (!valid) {
-      console.warn('Recreating bookmarks table with correct schema');
-      db.run('DROP TABLE IF EXISTS bookmarks', recreateErr => {
-        if (recreateErr) console.error(recreateErr.message);
-        createBookmarks();
+  const proxyReq = http.request(options, (proxyRes) => {
+    if (proxyRes.statusCode !== 200) {
+      let body = '';
+      proxyRes.on('data', c => body += c);
+      proxyRes.on('end', () => {
+        console.error('OpenClaw error:', proxyRes.statusCode, body);
+        res.status(502).json({ error: 'AI assistant is currently offline. Please try again later.' });
       });
-    } else {
-      createBookmarks();
+      return;
     }
-  });
-});
 
-app.use(express.static('public'));
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
 
-app.post('/login', (req, res) => {
-  if (req.body.password === ADMIN_PASSWORD) {
-    req.session.admin = true;
-    res.json({ ok: true });
-  } else {
-    res.status(401).json({ error: 'Invalid password' });
-  }
-});
+    let fullContent = '';
 
-app.post('/logout', (req, res) => {
-  req.session.destroy(() => res.json({ ok: true }));
-});
+    proxyRes.on('data', (chunk) => {
+      const text = chunk.toString();
+      res.write(text);
 
-app.get('/me', (req, res) => {
-  res.json({ admin: !!req.session.admin });
-});
+      // Accumulate content to check for CONTACT tag
+      const lines = text.split('\n').filter(l => l.startsWith('data: '));
+      for (const line of lines) {
+        if (line === 'data: [DONE]') continue;
+        try {
+          const json = JSON.parse(line.slice(6));
+          const delta = json.choices?.[0]?.delta?.content;
+          if (delta) fullContent += delta;
+        } catch (e) {}
+      }
+    });
 
-const requireAdmin = (req, res, next) => {
-  if (req.session.admin) return next();
-  res.status(403).json({ error: 'Forbidden' });
-};
-
-app.get('/api/videos', (req, res) => {
-  db.all('SELECT id,title,filename,category_id,position FROM videos ORDER BY position', [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
-
-app.post('/api/videos', requireAdmin, upload.single('video'), (req, res) => {
-  const title = req.body.title || req.file.originalname;
-  const filename = req.file.filename;
-  const categoryId = req.body.category_id || null;
-  db.run('INSERT INTO videos(title,filename,category_id,position) VALUES(?,?,?,NULL)', [title, filename, categoryId], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    const id = this.lastID;
-    db.run('UPDATE videos SET position=? WHERE id=?', [id, id]);
-    res.json({ id, title, filename, category_id: categoryId, position: id });
-  });
-});
-
-app.put('/api/videos/:id', requireAdmin, (req, res) => {
-  const { title, category_id, position } = req.body;
-  const fields = [];
-  const params = [];
-  if (title !== undefined) {
-    fields.push('title=?');
-    params.push(title);
-  }
-  if (category_id !== undefined) {
-    fields.push('category_id=?');
-    params.push(category_id);
-  }
-  if (position !== undefined) {
-    fields.push('position=?');
-    params.push(position);
-  }
-  if (!fields.length) return res.json({ ok: true });
-  params.push(req.params.id);
-  db.run(`UPDATE videos SET ${fields.join(', ')} WHERE id=?`, params, function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ ok: true });
-  });
-});
-
-app.delete('/api/videos/:id', requireAdmin, (req, res) => {
-  db.get('SELECT filename FROM videos WHERE id=?', [req.params.id], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.status(404).json({ error: 'Not found' });
-    const filepath = path.join(__dirname, 'uploads', row.filename);
-    fs.unlink(filepath, unlinkErr => {
-      if (unlinkErr && unlinkErr.code !== 'ENOENT') console.error('Failed to remove file', unlinkErr);
-      db.run('DELETE FROM bookmarks WHERE video_id=?', [req.params.id], err2 => {
-        if (err2) return res.status(500).json({ error: err2.message });
-        db.run('DELETE FROM videos WHERE id=?', [req.params.id], function (err3) {
-          if (err3) return res.status(500).json({ error: err3.message });
-          res.json({ ok: true });
-        });
-      });
+    proxyRes.on('end', () => {
+      res.end();
+      // Check for contact notification tag
+      const match = fullContent.match(/<!--CONTACT:(.*?)-->/);
+      if (match) {
+        try {
+          const contact = JSON.parse(match[1]);
+          sendDiscordNotification(contact);
+          console.log('Contact notification sent:', contact);
+        } catch (e) {}
+      }
     });
   });
+
+  proxyReq.on('error', (err) => {
+    console.error('OpenClaw connection error:', err.message);
+    res.status(502).json({ error: 'AI assistant is currently offline. Please try again later.' });
+  });
+
+  proxyReq.write(payload);
+  proxyReq.end();
 });
 
-// category APIs
-app.get('/api/categories', (req, res) => {
-  db.all('SELECT id,name,parent_id,position FROM categories ORDER BY position', [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
+// Page routes
+const pages = ['about', 'skills', 'projects', 'career', 'chat'];
+pages.forEach(page => {
+  app.get(`/${page}`, (req, res) => {
+    res.sendFile(`${page}.html`, { root: publicDir });
   });
 });
 
-app.post('/api/categories', requireAdmin, (req, res) => {
-  const { name, parent_id } = req.body;
-  db.run('INSERT INTO categories(name,parent_id,position) VALUES(?,?,NULL)', [name, parent_id || null], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    const id = this.lastID;
-    db.run('UPDATE categories SET position=? WHERE id=?', [id, id]);
-    res.json({ id, name, parent_id: parent_id || null, position: id });
-  });
+app.get('*', (req, res) => {
+  res.sendFile('index.html', { root: publicDir });
 });
 
-app.put('/api/categories/:id', requireAdmin, (req, res) => {
-  const { name, parent_id, position } = req.body;
-  const fields = [];
-  const params = [];
-  if (name !== undefined) { fields.push('name=?'); params.push(name); }
-  if (parent_id !== undefined) { fields.push('parent_id=?'); params.push(parent_id); }
-  if (position !== undefined) { fields.push('position=?'); params.push(position); }
-  if (!fields.length) return res.json({ ok: true });
-  params.push(req.params.id);
-  db.run(`UPDATE categories SET ${fields.join(', ')} WHERE id=?`, params, function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ ok: true });
-  });
-});
-
-app.delete('/api/categories/:id', requireAdmin, (req, res) => {
-  const id = req.params.id;
-  db.serialize(() => {
-    db.run('UPDATE videos SET category_id=NULL WHERE category_id=?', [id]);
-    db.run('UPDATE categories SET parent_id=NULL WHERE parent_id=?', [id]);
-    db.run('DELETE FROM categories WHERE id=?', [id], function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ ok: true });
-    });
-  });
-});
-
-app.put('/api/videos/reorder', requireAdmin, (req, res) => {
-  const { ids } = req.body;
-  if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids required' });
-  db.serialize(() => {
-    ids.forEach((id, idx) => {
-      db.run('UPDATE videos SET position=? WHERE id=?', [idx, id]);
-    });
-    res.json({ ok: true });
-  });
-});
-
-app.put('/api/categories/reorder', requireAdmin, (req, res) => {
-  const { ids } = req.body;
-  if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids required' });
-  db.serialize(() => {
-    ids.forEach((id, idx) => {
-      db.run('UPDATE categories SET position=? WHERE id=?', [idx, id]);
-    });
-    res.json({ ok: true });
-  });
-});
-
-app.get('/video/:filename', (req, res) => {
-  const filepath = path.join(__dirname, 'uploads', req.params.filename);
-  res.set('Cache-Control', 'public, max-age=86400');
-  res.sendFile(filepath);
-});
-
-app.get('/api/videos/:id/bookmarks', (req, res) => {
-  db.all('SELECT * FROM bookmarks WHERE video_id=? ORDER BY time', [req.params.id], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
-
-app.post('/api/videos/:id/bookmarks', requireAdmin, (req, res) => {
-  const { time, title, content } = req.body;
-  db.run('INSERT INTO bookmarks(video_id,time,title,content) VALUES (?,?,?,?)',
-    [req.params.id, time, title, content], function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: this.lastID, time, title, content });
-    });
-});
-
-app.put('/api/bookmarks/:id', requireAdmin, (req, res) => {
-  const { title, content } = req.body;
-  db.run('UPDATE bookmarks SET title=?, content=? WHERE id=?',
-    [title, content, req.params.id], function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ ok: true });
-    });
-});
-
-app.delete('/api/bookmarks/:id', requireAdmin, (req, res) => {
-  db.run('DELETE FROM bookmarks WHERE id=?', [req.params.id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ ok: true });
-  });
-});
-
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 80;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
