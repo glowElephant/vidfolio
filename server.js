@@ -99,10 +99,10 @@ const PORTFOLIO_SYSTEM_PROMPT = `# Portfolio Assistant - glowElephant
 - Engine: Unity 3D/2D (8년), OpenGL/DirectX
 - Languages: C# (전문), Python, TypeScript/JS, Dart, Lua, C/C++
 - Mobile: Flutter, Android/iOS 네이티브
-- Architecture: MVVM (UniRx), VContainer DI, WebSocket/REST
-- XR: AR (ARCore/ARKit), Naver ARCeye VLsdk, XREAL Glasses, Digital Twin
+- Architecture: MVVM (UniRx), VContainer DI, UniTask, UaaL (Unity as a Library), WebSocket/REST
+- XR: AR Foundation, ARCore/ARKit, Naver ARCeye VLsdk, XREAL Glasses, Digital Twin
 - AI: OpenAI API, Claude, Gemini, Midjourney, Flux, D-ID, HeyGen, Applio, ComfyUI
-- DevOps: CI/CD (GameCI, Jenkins), GitHub Actions, Docker
+- DevOps: GitHub Actions, GameCI, Docker, Gradle, Jenkins, Self-hosted Runner (Linux/macOS ARM64)
 
 ### 경력 요약
 1. (주) 스마트프로 (2026.01~현재) — Digital Twin, VTS 기반 프로젝트, 원전 시설 시스템
@@ -120,16 +120,17 @@ const PORTFOLIO_SYSTEM_PROMPT = `# Portfolio Assistant - glowElephant
 
 ### 주요 프로젝트
 - AI_Language — AI 에이전트 간 통신 효율을 위한 압축 언어 프로토콜
-- morning-cast — OpenClaw + NotebookLM 아침 뉴스 브리핑 자동화
 - PDF_TO_VIDEO — PDF → 요약 → 나레이션 영상 자동 생성
 - PixelCrawler — Puppeteer 기반 웹 스냅샷 CLI 도구
-- COEX AR Navigation — Naver VLsdk 기반 실내 AR 내비게이션
+- COEX AR Navigation — Naver VLsdk 기반 실내 AR 내비게이션 (UaaL, VContainer DI, UniRx MVVM, 다층 내비, POI 시스템)
+- GameCI Hub — 4개 Unity 프로젝트 통합 CI/CD 허브 (GitHub Actions, Self-hosted Runner, Android APK/AAR + iOS XCFramework 자동 빌드)
 
 ### 강점
 - AI를 도구로 활용하여 비용 80~90% 절감 실적
 - 반복작업 발견 시 Tool 제작을 우선순위로 고려
 - 비개발직군 대상 멘토링 & 기술 공유 문화 주도
 - 다양한 부서와의 협업, 빠른 적응력
+- CI/CD 파이프라인 설계·구축 (4개 프로젝트 통합, 빌드 시간 70% 단축)
 
 ## 공개 가능 정보
 - 위에 작성된 모든 경력, 기술, 프로젝트 정보
