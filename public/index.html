@@ -70,8 +70,26 @@
 
   <footer>
     <p class="footer-msg">$ echo "Let's build something together."</p>
+    <div class="visitor-counter">
+      <span class="prompt">$</span> visitors --count
+      <span class="visitor-stats">
+        <span>Today: <span id="visitors-today">-</span></span>
+        <span>Total: <span id="visitors-total">-</span></span>
+      </span>
+    </div>
     <p>&copy; 2025 장한아 | glowElephant</p>
   </footer>
+
+  <script>
+    // Load visitor count
+    fetch('/api/visitors')
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById('visitors-today').textContent = data.today.toLocaleString();
+        document.getElementById('visitors-total').textContent = data.total.toLocaleString();
+      })
+      .catch(() => {});
+  </script>
 
   <script src="/js/particles.js"></script>
   <script src="/js/nav.js"></script>

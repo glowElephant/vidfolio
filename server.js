@@ -1,9 +1,78 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const http = require('http');
+const fs = require('fs');
 
 const app = express();
 const publicDir = path.resolve(__dirname, 'public');
+
+// Chat log directory (file-based persistence)
+const CHATLOG_DIR = path.resolve(__dirname, 'chatlog');
+if (!fs.existsSync(CHATLOG_DIR)) {
+  fs.mkdirSync(CHATLOG_DIR);
+}
+
+// Visitor counter (file-based persistence)
+const VISITOR_FILE = path.resolve(__dirname, 'visitors.json');
+let visitorData = { total: 0, today: 0, todayDate: new Date().toDateString() };
+
+// Load visitor data from file
+function loadVisitorData() {
+  try {
+    if (fs.existsSync(VISITOR_FILE)) {
+      const data = JSON.parse(fs.readFileSync(VISITOR_FILE, 'utf8'));
+      visitorData = data;
+      // Reset today count if new day
+      if (visitorData.todayDate !== new Date().toDateString()) {
+        visitorData.today = 0;
+        visitorData.todayDate = new Date().toDateString();
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load visitor data:', e.message);
+  }
+}
+
+// Save visitor data to file
+function saveVisitorData() {
+  try {
+    fs.writeFileSync(VISITOR_FILE, JSON.stringify(visitorData, null, 2));
+  } catch (e) {
+    console.error('Failed to save visitor data:', e.message);
+  }
+}
+
+// Track unique visitors by IP (per day)
+const visitedIPs = new Set();
+let visitedIPsDate = new Date().toDateString();
+
+function normalizeIp(ip) {
+  if (!ip) return 'unknown';
+  // Remove IPv6-mapped IPv4 prefix
+  return ip.replace(/^::ffff:/, '').replace(/^::1$/, '127.0.0.1');
+}
+
+function trackVisitor(ip) {
+  ip = normalizeIp(ip);
+  // Reset IP set if new day
+  if (visitedIPsDate !== new Date().toDateString()) {
+    visitedIPs.clear();
+    visitedIPsDate = new Date().toDateString();
+    visitorData.today = 0;
+    visitorData.todayDate = new Date().toDateString();
+  }
+
+  // Only count unique visitors per day
+  if (!visitedIPs.has(ip)) {
+    visitedIPs.add(ip);
+    visitorData.total++;
+    visitorData.today++;
+    saveVisitorData();
+  }
+}
+
+loadVisitorData();
 
 // OpenClaw Gateway config
 const OC_HOST = '127.0.0.1';
@@ -86,6 +155,13 @@ const PORTFOLIO_SYSTEM_PROMPT = `# Portfolio Assistant - glowElephant
    <!--CONTACT:{"name":"방문자이름","email":"이메일","company":"회사명","message":"요약"}-->
 이 태그는 시스템이 자동으로 감지하여 장한아에게 디스코드로 알림을 보낸다.
 
+## 대화 전달 요청
+방문자가 "이 대화를 전달해주세요", "한아님께 알려주세요" 등 대화 내용 전달을 요청하면:
+1. "한아님께 대화 내용을 전달해드리겠습니다!" 안내
+2. 응답 마지막에 반드시 다음 형식의 태그를 포함:
+   <!--FORWARD_CHATLOG:{"reason":"전달 사유 요약"}-->
+이 태그는 시스템이 자동으로 감지하여 장한아에게 디스코드로 대화 내역과 함께 알림을 보낸다.
+
 ## 대화 스타일
 - 기본 한국어, 영어로 질문하면 영어로 답변
 - 친근하지만 전문적 (반말X, 존댓말 사용)
@@ -150,15 +226,69 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+// Sanitize sessionId to prevent path traversal / injection
+function sanitizeSessionId(id) {
+  if (!id || typeof id !== 'string') return 'anonymous';
+  const sanitized = id.replace(/[^a-zA-Z0-9_-]/g, '');
+  return sanitized.slice(0, 100) || 'anonymous';
+}
+
+// Validate and sanitize incoming messages
+const MAX_MSG_LENGTH = 2000;
+const MAX_MESSAGES = 20;
+
+function validateMessages(messages) {
+  if (!Array.isArray(messages)) return null;
+  return messages.slice(-MAX_MESSAGES).map(m => ({
+    role: m.role === 'assistant' ? 'assistant' : 'user',
+    content: typeof m.content === 'string' ? m.content.slice(0, MAX_MSG_LENGTH) : ''
+  })).filter(m => m.content.length > 0);
+}
+
+// Chat log save
+function saveChatLog(sessionId, ip, role, content) {
+  if (!sessionId || !content) return;
+  sessionId = sanitizeSessionId(sessionId);
+  const filePath = path.join(CHATLOG_DIR, `${sessionId}.json`);
+  let logData;
+  try {
+    if (fs.existsSync(filePath)) {
+      logData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    } else {
+      logData = { sessionId, ip, startedAt: new Date().toISOString(), messages: [] };
+    }
+    logData.messages.push({ role, content, timestamp: new Date().toISOString() });
+    fs.writeFileSync(filePath, JSON.stringify(logData, null, 2));
+  } catch (e) {
+    console.error('Failed to save chat log:', e.message);
+  }
+}
+
 // Discord webhook for contact notifications
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || '';
 
-async function sendDiscordNotification(contact) {
+// Read recent chat history for Discord forwarding
+function getChatHistory(sessionId) {
+  const filePath = path.join(CHATLOG_DIR, `${sanitizeSessionId(sessionId)}.json`);
+  try {
+    if (!fs.existsSync(filePath)) return '';
+    const logData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const recent = logData.messages.slice(-10);
+    let history = recent.map(m =>
+      `**${m.role === 'user' ? '방문자' : 'AI'}**: ${m.content}`
+    ).join('\n');
+    if (history.length > 1400) history = '...' + history.slice(-1400);
+    return history;
+  } catch (e) {
+    return '';
+  }
+}
+
+// Send Discord webhook message
+function sendDiscordMessage(content) {
   if (!DISCORD_WEBHOOK) return;
   try {
-    const body = JSON.stringify({
-      content: `**Portfolio Contact**\nName: ${contact.name || 'N/A'}\nEmail: ${contact.email || 'N/A'}\nCompany: ${contact.company || 'N/A'}\nMessage: ${contact.message || 'N/A'}`
-    });
+    const body = JSON.stringify({ content: content.slice(0, 2000) });
     const url = new URL(DISCORD_WEBHOOK);
     const options = {
       hostname: url.hostname,
@@ -174,8 +304,40 @@ async function sendDiscordNotification(contact) {
   }
 }
 
+async function sendDiscordNotification(contact, sessionId) {
+  const header = `**Portfolio Contact**\nName: ${contact.name || 'N/A'}\nEmail: ${contact.email || 'N/A'}\nCompany: ${contact.company || 'N/A'}\nMessage: ${contact.message || 'N/A'}`;
+  const history = sessionId ? getChatHistory(sessionId) : '';
+  const content = history ? `${header}\n\n--- 대화 내역 ---\n${history}` : header;
+  sendDiscordMessage(content);
+}
+
+function sendChatLogForward(sessionId, reason) {
+  const history = getChatHistory(sessionId);
+  if (!history) return;
+  const content = `**대화 전달 요청**\nSession: ${sanitizeSessionId(sessionId)}\nReason: ${reason || 'N/A'}\n\n--- 대화 내역 ---\n${history}`;
+  sendDiscordMessage(content);
+}
+
 app.use(express.json());
+
+// Track visitors on page load (before static so '/' is also tracked)
+app.use((req, res, next) => {
+  if (req.path === '/' || ['about', 'skills', 'projects', 'career', 'chat'].includes(req.path.slice(1))) {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    trackVisitor(clientIp);
+  }
+  next();
+});
+
 app.use(express.static(publicDir));
+
+// Visitor count API
+app.get('/api/visitors', (req, res) => {
+  res.json({
+    total: visitorData.total,
+    today: visitorData.today
+  });
+});
 
 // Chat API proxy → OpenClaw Gateway
 app.post('/api/chat', (req, res) => {
@@ -191,13 +353,23 @@ app.post('/api/chat', (req, res) => {
     return res.status(429).json({ error: '오늘 전체 이용량이 초과되었어요. 내일 다시 이용해주세요!' });
   }
 
-  const { messages, sessionId } = req.body;
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+  const { messages, sessionId: rawSessionId } = req.body;
+  const sessionId = sanitizeSessionId(rawSessionId);
+
+  // Validate messages
+  const validated = validateMessages(messages);
+  if (!validated || validated.length === 0) {
     return res.status(400).json({ error: 'messages required' });
   }
 
+  // Save user message to chat log
+  const lastUserMsg = validated[validated.length - 1];
+  if (lastUserMsg && lastUserMsg.role === 'user') {
+    saveChatLog(sessionId, normalizeIp(clientIp), 'user', lastUserMsg.content);
+  }
+
   // Limit message history sent to API (last 20 messages)
-  const trimmed = messages.slice(-20);
+  const trimmed = validated.slice(-20);
 
   // Prepend portfolio system prompt for web chat visitors
   // (Discord uses 봄's SOUL.md from the default workspace)
@@ -210,7 +382,7 @@ app.post('/api/chat', (req, res) => {
     model: `openclaw:${OC_AGENT}`,
     stream: true,
     max_tokens: 400,
-    user: sessionId || 'anonymous',
+    user: sessionId,
     messages: chatMessages
   });
 
@@ -262,13 +434,26 @@ app.post('/api/chat', (req, res) => {
 
     proxyRes.on('end', () => {
       res.end();
+      // Save assistant response to chat log
+      if (fullContent) {
+        saveChatLog(sessionId, normalizeIp(clientIp), 'assistant', fullContent);
+      }
       // Check for contact notification tag
-      const match = fullContent.match(/<!--CONTACT:(.*?)-->/);
-      if (match) {
+      const contactMatch = fullContent.match(/<!--CONTACT:(.*?)-->/);
+      if (contactMatch) {
         try {
-          const contact = JSON.parse(match[1]);
-          sendDiscordNotification(contact);
+          const contact = JSON.parse(contactMatch[1]);
+          sendDiscordNotification(contact, sessionId);
           console.log('Contact notification sent:', contact);
+        } catch (e) {}
+      }
+      // Check for chat log forward tag
+      const forwardMatch = fullContent.match(/<!--FORWARD_CHATLOG:(.*?)-->/);
+      if (forwardMatch) {
+        try {
+          const data = JSON.parse(forwardMatch[1]);
+          sendChatLogForward(sessionId, data.reason);
+          console.log('Chat log forwarded:', sessionId);
         } catch (e) {}
       }
     });

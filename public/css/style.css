@@ -1346,3 +1346,22 @@ footer .footer-msg { color: var(--green); margin-bottom: .3rem; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ===== Visitor Counter ===== */
+.visitor-counter {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: .85rem;
+  color: var(--text-dim);
+  margin: .5rem 0;
+}
+.visitor-stats {
+  display: flex;
+  gap: 1.5rem;
+  color: var(--green);
+}
+.visitor-stats span {
+  display: flex;
+  gap: .3rem;
+}

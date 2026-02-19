@@ -2,3 +2,5 @@ node_modules
 uploads
 data.db
 .env
+visitors.json
+chatlog/
