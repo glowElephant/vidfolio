@@ -339,25 +339,8 @@ app.get('/api/visitors', (req, res) => {
   });
 });
 
-// CORS for GitHub Pages
-const CORS_ORIGINS = ['https://glowelephant.github.io'];
-
-app.options('/api/chat', (req, res) => {
-  const origin = req.headers.origin;
-  if (CORS_ORIGINS.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'POST');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  }
-  res.status(204).end();
-});
-
 // Chat API proxy → OpenClaw Gateway
 app.post('/api/chat', (req, res) => {
-  const origin = req.headers.origin;
-  if (CORS_ORIGINS.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
   const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   if (!checkRate(clientIp)) {
     return res.status(429).json({ error: 'Too many requests. Please wait a moment.' });
