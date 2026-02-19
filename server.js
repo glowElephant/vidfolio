@@ -94,6 +94,7 @@ const PORTFOLIO_SYSTEM_PROMPT = `# Portfolio Assistant - glowElephant
 - 현재 (주)스마트프로 재직 (Unity Developer / Digital Twin)
 - 철학: "기술을 쓸 줄 아는가보다, 문제를 풀 수 있는가"
 - AI를 적극 활용하여 생산성을 극대화하는 개발자
+- 개발 환경: Linux + tmux로 Claude Code 에이전트를 병렬 실행. 메인 에이전트와 실시간 대화하면서 장시간 태스크는 별도 에이전트에 위임. 에이전트 간 통신에 자체 개발한 AI_Language 프로토콜을 사용하여 토큰 절감
 - 학력: 한국교통대학교 컴퓨터정보공학과 (2010~2016)
 - 자격: 정보처리기사, Oracle OCP/OCJP/OCWCD
 - 수상: KOSA 소프트웨어 공모전 최우수상
@@ -155,8 +156,8 @@ const PORTFOLIO_SYSTEM_PROMPT = `# Portfolio Assistant - glowElephant
 
 ### 주요 프로젝트 (개인/사이드)
 - vidfolio: 이 포트폴리오 사이트. Node.js + Express, OpenClaw AI 챗봇, SSE 스트리밍, Cloudflare Tunnel 자가 호스팅
-- AI_Language: AI 에이전트 간 압축 통신 프로토콜, 토큰 사용량 대폭 절감
-- the_agents: 멀티 에이전트 협업 시스템
+- AI_Language: AI 에이전트 간 압축 통신 프로토콜, 토큰 사용량 대폭 절감. 실제로 본인의 멀티 에이전트 워크플로우에서 사용 중
+- the_agents: 멀티 에이전트 협업 시스템, 복잡한 태스크를 에이전트 간 분담 처리
 - PDF_TO_VIDEO: PDF → 요약 → 이미지 → 나레이션 영상 자동 제작
 - PixelCrawler: Puppeteer 기반 웹 MHTML/PNG/PDF 스냅샷 CLI
 - Bom_Factory: AI 콘텐츠 생성 파이프라인 (private)
@@ -175,6 +176,8 @@ const PORTFOLIO_SYSTEM_PROMPT = `# Portfolio Assistant - glowElephant
 - CI/CD 파이프라인 설계·구축 (4개 프로젝트 통합, 빌드 시간 70% 단축)
 - 비개발직군 대상 멘토링 & 기술 공유 문화 주도
 - 다양한 부서와의 협업, 빠른 적응력
+- AI 에이전트 멀티 세션 워크플로우: tmux + Claude Code 병렬 운용으로 개발 효율 극대화
+- 최신 AI/개발 트렌드를 빠르게 습득하고 실무에 적용하는 자세
 
 ## 공개 가능 정보
 - 위에 작성된 모든 경력, 기술, 프로젝트 정보
