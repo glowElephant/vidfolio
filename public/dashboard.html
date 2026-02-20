@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics Dashboard — glowElephant</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-card: #1c2333;
+    --bg-card-hover: #242d3d;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-dim: #8b949e;
+    --text-bright: #f0f6fc;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --cyan: #39d353;
+    --orange: #f0883e;
+    --pink: #f778ba;
+    --radius: 8px;
+    --font: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 16px;
+  }
+  /* Header */
+  .header {
+    margin-bottom: 24px;
+  }
+  .header .prompt {
+    color: var(--green);
+    font-size: 14px;
+  }
+  .header .prompt span { color: var(--accent); }
+  .header .cmd {
+    color: var(--text-bright);
+    font-size: 14px;
+    margin-top: 2px;
+  }
+  .header .cmd span { color: var(--yellow); }
+  /* Filter bar */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .filter-bar button {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    font-family: var(--font);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .filter-bar button:hover { border-color: var(--accent); color: var(--text); }
+  .filter-bar button.active {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .filter-bar .spacer { flex: 1; }
+  .filter-bar .updated {
+    color: var(--text-dim);
+    font-size: 11px;
+  }
+  .refresh-btn {
+    background: var(--bg-card) !important;
+    border-color: var(--green) !important;
+    color: var(--green) !important;
+  }
+  .refresh-btn:hover { background: var(--green) !important; color: var(--bg) !important; }
+  /* Summary cards */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .card .label {
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .card .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-top: 4px;
+  }
+  .card:nth-child(1) .value { color: var(--green); }
+  .card:nth-child(2) .value { color: var(--accent); }
+  .card:nth-child(3) .value { color: var(--yellow); }
+  .card:nth-child(4) .value { color: var(--purple); }
+  /* Charts */
+  .chart-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .chart-row.full { grid-template-columns: 1fr; }
+  .chart-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .chart-box h3 {
+    color: var(--text-dim);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+  .chart-box canvas { max-height: 280px; }
+  /* Tables */
+  .table-section {
+    margin-top: 12px;
+  }
+  .table-section h3 {
+    color: var(--text-dim);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  th, td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  th {
+    background: var(--bg-secondary);
+    color: var(--text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 11px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg-card-hover); }
+  .ip-masked { color: var(--text-dim); }
+  /* Loading */
+  .loading {
+    text-align: center;
+    padding: 60px;
+    color: var(--text-dim);
+  }
+  .loading::after {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* Responsive */
+  @media (max-width: 768px) {
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    .chart-row { grid-template-columns: 1fr; }
+    table { font-size: 11px; }
+    th, td { padding: 6px 8px; }
+    .hide-mobile { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="dashboard">
+  <div class="header">
+    <div class="prompt">hanah@portfolio:<span>~/analytics</span></div>
+    <div class="cmd">$ <span>analytics --dashboard</span></div>
+  </div>
+
+  <div class="filter-bar">
+    <button data-days="7">7d</button>
+    <button data-days="30" class="active">30d</button>
+    <button data-days="90">90d</button>
+    <div class="spacer"></div>
+    <span class="updated" id="lastUpdate"></span>
+    <button class="refresh-btn" onclick="fetchData()">Refresh</button>
+  </div>
+
+  <div id="content"><div class="loading">Loading analytics</div></div>
+</div>
+
+<script>
+const TOKEN = new URLSearchParams(location.search).get('token');
+let currentDays = 30;
+let charts = {};
+let autoRefresh;
+
+// Country code → flag emoji
+function flag(code) {
+  if (!code || code.length !== 2) return '';
+  return String.fromCodePoint(...[...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+}
+
+// Mask IP: 1.2.3.4 → 1.2.***
+function maskIp(ip) {
+  if (!ip) return '';
+  const p = ip.split('.');
+  if (p.length === 4) return p[0] + '.' + p[1] + '.***';
+  return ip.slice(0, ip.length / 2) + '***';
+}
+
+// Chart.js defaults
+Chart.defaults.color = '#8b949e';
+Chart.defaults.borderColor = '#30363d';
+Chart.defaults.font.family = "'JetBrains Mono', monospace";
+Chart.defaults.font.size = 11;
+
+const COLORS = ['#58a6ff','#3fb950','#d29922','#f85149','#bc8cff','#f0883e','#f778ba','#39d353','#79c0ff','#e3b341'];
+
+function destroyCharts() {
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+}
+
+function renderDashboard(data) {
+  const s = data.summary;
+  const el = document.getElementById('content');
+  el.innerHTML = `
+    <div class="summary">
+      <div class="card"><div class="label">Total Visitors</div><div class="value">${s.totalAllTime.toLocaleString()}</div></div>
+      <div class="card"><div class="label">Today</div><div class="value">${s.today.toLocaleString()}</div></div>
+      <div class="card"><div class="label">${s.days}d Page Views</div><div class="value">${s.periodViews.toLocaleString()}</div></div>
+      <div class="card"><div class="label">Unique IPs</div><div class="value">${s.uniqueIPs.toLocaleString()}</div></div>
+    </div>
+
+    <div class="chart-row full"><div class="chart-box"><h3>Daily Visitors</h3><canvas id="chartDaily"></canvas></div></div>
+
+    <div class="chart-row">
+      <div class="chart-box"><h3>Country</h3><canvas id="chartCountry"></canvas></div>
+      <div class="chart-box"><h3>Pages</h3><canvas id="chartPage"></canvas></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3>Device</h3><canvas id="chartDevice"></canvas></div>
+      <div class="chart-box"><h3>Browser</h3><canvas id="chartBrowser"></canvas></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3>OS</h3><canvas id="chartOS"></canvas></div>
+      <div class="chart-box"><h3>Language</h3><canvas id="chartLang"></canvas></div>
+    </div>
+
+    <div class="chart-row full"><div class="chart-box"><h3>Hourly Distribution</h3><canvas id="chartHourly"></canvas></div></div>
+
+    <div class="table-section"><h3>Top Referrers</h3>
+      <table><thead><tr><th>Source</th><th>Count</th></tr></thead>
+      <tbody>${data.refCounts.map(([k,v]) => `<tr><td>${esc(k)}</td><td>${v}</td></tr>`).join('') || '<tr><td colspan="2" style="color:var(--text-dim)">No data</td></tr>'}</tbody></table>
+    </div>
+
+    <div class="table-section" style="margin-top:16px"><h3>Recent Visitors (last 50)</h3>
+      <table><thead><tr>
+        <th>Time</th><th>Country</th><th>Page</th><th>Device</th>
+        <th class="hide-mobile">Browser</th><th class="hide-mobile">OS</th>
+        <th class="hide-mobile">Referrer</th><th>IP</th>
+      </tr></thead>
+      <tbody>${data.recentVisitors.map(v => {
+        const t = new Date(v.timestamp);
+        const time = t.toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'}) + ' ' + t.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
+        return `<tr>
+          <td>${time}</td>
+          <td>${v.country ? flag(v.country)+' '+v.country : '-'}</td>
+          <td>${esc(v.page)}</td>
+          <td>${esc(v.device)}</td>
+          <td class="hide-mobile">${esc(v.browser)}</td>
+          <td class="hide-mobile">${esc(v.os)}</td>
+          <td class="hide-mobile">${esc(v.referer)}</td>
+          <td>${esc(v.ip)}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="8" style="color:var(--text-dim)">No data</td></tr>'}</tbody></table>
+    </div>
+  `;
+
+  destroyCharts();
+
+  // Daily line chart
+  charts.daily = new Chart(document.getElementById('chartDaily'), {
+    type: 'line',
+    data: {
+      labels: data.dailyCounts.map(d => d[0].slice(5)),
+      datasets: [{ label: 'Views', data: data.dailyCounts.map(d => d[1]),
+        borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.1)',
+        fill: true, tension: 0.3, pointRadius: 2 }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+  });
+
+  // Doughnut helper
+  function doughnut(id, entries) {
+    const top = entries.slice(0, 8);
+    charts[id] = new Chart(document.getElementById(id), {
+      type: 'doughnut',
+      data: { labels: top.map(e => e[0]), datasets: [{ data: top.map(e => e[1]), backgroundColor: COLORS }] },
+      options: { plugins: { legend: { position: 'right', labels: { boxWidth: 12, padding: 8 } } } }
+    });
+  }
+
+  doughnut('chartCountry', data.countryCounts);
+  doughnut('chartDevice', data.deviceCounts);
+  doughnut('chartBrowser', data.browserCounts);
+  doughnut('chartOS', data.osCounts);
+  doughnut('chartLang', data.langCounts);
+
+  // Pages horizontal bar
+  const pageTop = data.pageCounts.slice(0, 8);
+  charts.page = new Chart(document.getElementById('chartPage'), {
+    type: 'bar',
+    data: {
+      labels: pageTop.map(p => p[0]),
+      datasets: [{ data: pageTop.map(p => p[1]), backgroundColor: '#3fb950', borderRadius: 4 }]
+    },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+  });
+
+  // Hourly bar
+  charts.hourly = new Chart(document.getElementById('chartHourly'), {
+    type: 'bar',
+    data: {
+      labels: Array.from({length:24}, (_,i) => String(i).padStart(2,'0')),
+      datasets: [{ data: data.hourlyCounts, backgroundColor: '#d29922', borderRadius: 4 }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+  });
+}
+
+function esc(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+async function fetchData() {
+  try {
+    const res = await fetch(`/api/analytics?token=${TOKEN}&days=${currentDays}`);
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    renderDashboard(data);
+    document.getElementById('lastUpdate').textContent = 'Updated ' + new Date().toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  } catch (e) {
+    document.getElementById('content').innerHTML = `<div class="loading" style="color:var(--red)">Failed to load: ${esc(e.message)}</div>`;
+  }
+}
+
+// Filter buttons
+document.querySelectorAll('.filter-bar button[data-days]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-bar button[data-days]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentDays = parseInt(btn.dataset.days);
+    fetchData();
+  });
+});
+
+// Auto refresh 60s
+function startAutoRefresh() {
+  if (autoRefresh) clearInterval(autoRefresh);
+  autoRefresh = setInterval(fetchData, 60000);
+}
+
+fetchData();
+startAutoRefresh();
+</script>
+</body>
+</html>

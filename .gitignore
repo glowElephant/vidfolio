@@ -4,3 +4,4 @@ data.db
 .env
 visitors.json
 chatlog/
+visitors/

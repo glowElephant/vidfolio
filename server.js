@@ -74,6 +74,134 @@ function trackVisitor(ip) {
 
 loadVisitorData();
 
+// ──── Visitor Analytics (individual visit records) ────
+const VISITOR_DIR = path.resolve(__dirname, 'visitors');
+if (!fs.existsSync(VISITOR_DIR)) fs.mkdirSync(VISITOR_DIR);
+
+const DASHBOARD_TOKEN = process.env.DASHBOARD_TOKEN || '';
+
+// Write queue to prevent concurrent writes
+let writeQueue = Promise.resolve();
+
+function getMonthKey(date) {
+  const d = date || new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function loadVisitorLog(monthKey) {
+  const filePath = path.join(VISITOR_DIR, `${monthKey}.json`);
+  try {
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    }
+  } catch (e) {
+    console.error('Failed to load visitor log:', e.message);
+  }
+  return { month: monthKey, visits: [] };
+}
+
+function saveVisitRecord(record) {
+  writeQueue = writeQueue.then(() => new Promise((resolve) => {
+    setImmediate(() => {
+      try {
+        const monthKey = getMonthKey(new Date(record.timestamp));
+        const filePath = path.join(VISITOR_DIR, `${monthKey}.json`);
+        const log = loadVisitorLog(monthKey);
+        log.visits.push(record);
+        fs.writeFileSync(filePath, JSON.stringify(log));
+        resolve();
+      } catch (e) {
+        console.error('Failed to save visit record:', e.message);
+        resolve();
+      }
+    });
+  }));
+}
+
+function parseUserAgent(ua) {
+  if (!ua) return { browser: 'Unknown', device: 'Unknown', os: 'Unknown' };
+
+  // Bot detection
+  if (/bot|crawl|spider|slurp|facebookexternalhit|Bytespider|GPTBot|ClaudeBot|Baiduspider|Googlebot/i.test(ua)) {
+    return { browser: 'Bot', device: 'Bot', os: 'Bot' };
+  }
+
+  // Browser
+  let browser = 'Other';
+  if (/Edg\//i.test(ua)) browser = 'Edge';
+  else if (/OPR\//i.test(ua) || /Opera/i.test(ua)) browser = 'Opera';
+  else if (/SamsungBrowser/i.test(ua)) browser = 'Samsung';
+  else if (/Chrome/i.test(ua)) browser = 'Chrome';
+  else if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) browser = 'Safari';
+  else if (/Firefox/i.test(ua)) browser = 'Firefox';
+
+  // OS
+  let os = 'Other';
+  if (/Windows/i.test(ua)) os = 'Windows';
+  else if (/iPhone|iPad|iPod/i.test(ua)) os = 'iOS';
+  else if (/Mac OS/i.test(ua)) os = 'macOS';
+  else if (/Android/i.test(ua)) os = 'Android';
+  else if (/Linux/i.test(ua)) os = 'Linux';
+  else if (/CrOS/i.test(ua)) os = 'ChromeOS';
+
+  // Device
+  let device = 'PC';
+  if (/Mobile|Android.*Mobile|iPhone/i.test(ua)) device = 'Mobile';
+  else if (/iPad|Android(?!.*Mobile)|Tablet/i.test(ua)) device = 'Tablet';
+  else if (browser === 'Bot') device = 'Bot';
+
+  return { browser, device, os };
+}
+
+function parseReferer(referer) {
+  if (!referer) return 'Direct';
+  try {
+    const host = new URL(referer).hostname.replace(/^www\./, '');
+    if (host.includes('google')) return 'Google';
+    if (host.includes('github')) return 'GitHub';
+    if (host.includes('linkedin')) return 'LinkedIn';
+    if (host.includes('naver')) return 'Naver';
+    if (host.includes('daum') || host.includes('kakao')) return 'Kakao';
+    if (host.includes('bing')) return 'Bing';
+    if (host.includes('twitter') || host.includes('x.com')) return 'X/Twitter';
+    if (host.includes('facebook')) return 'Facebook';
+    if (host.includes('reddit')) return 'Reddit';
+    return host;
+  } catch {
+    return 'Direct';
+  }
+}
+
+// Prune visitor logs older than 6 months
+function pruneOldVisitorLogs() {
+  try {
+    const files = fs.readdirSync(VISITOR_DIR).filter(f => f.endsWith('.json'));
+    const now = new Date();
+    const cutoff = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+    const cutoffKey = getMonthKey(cutoff);
+    for (const file of files) {
+      const monthKey = file.replace('.json', '');
+      if (monthKey < cutoffKey) {
+        fs.unlinkSync(path.join(VISITOR_DIR, file));
+        console.log(`Pruned old visitor log: ${file}`);
+      }
+    }
+  } catch (e) {
+    console.error('Failed to prune visitor logs:', e.message);
+  }
+}
+
+// Prune on startup + daily
+pruneOldVisitorLogs();
+setInterval(pruneOldVisitorLogs, 24 * 60 * 60 * 1000);
+
+// Dashboard auth middleware
+function dashboardAuth(req, res, next) {
+  if (!DASHBOARD_TOKEN) return res.status(500).json({ error: 'Dashboard not configured' });
+  if (req.query.token !== DASHBOARD_TOKEN) return res.status(401).json({ error: 'Unauthorized' });
+  next();
+}
+
 // OpenClaw Gateway config
 const OC_HOST = '127.0.0.1';
 const OC_PORT = 18789;
@@ -376,16 +504,75 @@ function sendChatLogForward(sessionId, reason) {
 
 app.use(express.json());
 
+// Language detection from request headers/cookies
+function detectLanguage(req) {
+  // 1. Cookie (user's explicit choice via toggle)
+  const cookieStr = req.headers.cookie || '';
+  const langMatch = cookieStr.match(/(?:^|; )lang=([^;]*)/);
+  if (langMatch && (langMatch[1] === 'ko' || langMatch[1] === 'en')) return langMatch[1];
+
+  // 2. Cloudflare CF-IPCountry header
+  const country = req.headers['cf-ipcountry'];
+  if (country === 'KR') return 'ko';
+  if (country) return 'en';
+
+  // 3. Accept-Language header
+  const acceptLang = req.headers['accept-language'] || '';
+  if (/^ko/i.test(acceptLang)) return 'ko';
+
+  // 4. Default: English for international visitors
+  return 'en';
+}
+
+// Serve HTML with dynamic lang attribute injection
+function serveHtml(filePath, req, res) {
+  const lang = detectLanguage(req);
+  fs.readFile(filePath, 'utf8', (err, html) => {
+    if (err) return res.status(404).send('Not Found');
+    html = html.replace(/<html lang="ko"/, '<html lang="' + lang + '"');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  });
+}
+
+// Visitor tracking whitelist (excluded from counting)
+const VISITOR_WHITELIST = new Set((process.env.VISITOR_WHITELIST || '').split(',').map(s => s.trim()).filter(Boolean));
+
 // Track visitors on page load (before static so '/' is also tracked)
+const TRACKED_PAGES = ['/', '/about', '/skills', '/projects', '/career', '/chat'];
 app.use((req, res, next) => {
-  if (req.path === '/' || ['about', 'skills', 'projects', 'career', 'chat'].includes(req.path.slice(1))) {
+  if (TRACKED_PAGES.includes(req.path)) {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const ip = normalizeIp(clientIp);
+    if (VISITOR_WHITELIST.has(ip)) return next();
     trackVisitor(clientIp);
+
+    // Save individual visit record
+    const ua = parseUserAgent(req.headers['user-agent']);
+    const record = {
+      timestamp: new Date().toISOString(),
+      ip: normalizeIp(clientIp),
+      page: req.path,
+      country: req.headers['cf-ipcountry'] || '',
+      browser: ua.browser,
+      device: ua.device,
+      os: ua.os,
+      referer: parseReferer(req.headers['referer']),
+      lang: detectLanguage(req)
+    };
+    saveVisitRecord(record);
   }
   next();
 });
 
-app.use(express.static(publicDir));
+// HTML page routes with language injection (must be before static middleware)
+app.get('/', (req, res) => serveHtml(path.join(publicDir, 'index.html'), req, res));
+const pages = ['about', 'skills', 'projects', 'career', 'chat'];
+pages.forEach(page => {
+  app.get('/' + page, (req, res) => serveHtml(path.join(publicDir, page + '.html'), req, res));
+});
+
+app.use(express.static(publicDir, { index: false }));
 
 // Visitor count API
 app.get('/api/visitors', (req, res) => {
@@ -429,8 +616,12 @@ app.post('/api/chat', (req, res) => {
 
   // Prepend portfolio system prompt for web chat visitors
   // (Discord uses 봄's SOUL.md from the default workspace)
+  const lang = detectLanguage(req);
+  const langHint = lang === 'en'
+    ? '\n\n## Language\nThe visitor is browsing in English. Respond in English.'
+    : '';
   const chatMessages = [
-    { role: 'system', content: PORTFOLIO_SYSTEM_PROMPT },
+    { role: 'system', content: PORTFOLIO_SYSTEM_PROMPT + langHint },
     ...trimmed
   ];
 
@@ -524,16 +715,113 @@ app.post('/api/chat', (req, res) => {
   proxyReq.end();
 });
 
-// Page routes
-const pages = ['about', 'skills', 'projects', 'career', 'chat'];
-pages.forEach(page => {
-  app.get(`/${page}`, (req, res) => {
-    res.sendFile(`${page}.html`, { root: publicDir });
+// Dashboard route
+app.get('/dashboard', dashboardAuth, (req, res) => {
+  res.sendFile(path.join(publicDir, 'dashboard.html'));
+});
+
+// Analytics API
+app.get('/api/analytics', dashboardAuth, (req, res) => {
+  const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 90);
+  const now = new Date();
+  const cutoff = new Date(now);
+  cutoff.setDate(cutoff.getDate() - days);
+
+  // Collect all visits within the period
+  const monthsNeeded = new Set();
+  for (let d = new Date(cutoff); d <= now; d.setMonth(d.getMonth() + 1)) {
+    monthsNeeded.add(getMonthKey(d));
+  }
+  monthsNeeded.add(getMonthKey(now));
+
+  let allVisits = [];
+  for (const mk of monthsNeeded) {
+    const log = loadVisitorLog(mk);
+    allVisits = allVisits.concat(log.visits);
+  }
+
+  // Filter by date range
+  const cutoffISO = cutoff.toISOString();
+  const visits = allVisits.filter(v => v.timestamp >= cutoffISO);
+
+  // Aggregate
+  const dailyCounts = {};
+  const countryCounts = {};
+  const pageCounts = {};
+  const browserCounts = {};
+  const deviceCounts = {};
+  const osCounts = {};
+  const langCounts = {};
+  const hourlyCounts = Array(24).fill(0);
+  const refCounts = {};
+  const uniqueIPs = new Set();
+
+  for (const v of visits) {
+    // Daily
+    const day = v.timestamp.slice(0, 10);
+    dailyCounts[day] = (dailyCounts[day] || 0) + 1;
+
+    // Country
+    const country = v.country || 'Unknown';
+    countryCounts[country] = (countryCounts[country] || 0) + 1;
+
+    // Page
+    pageCounts[v.page] = (pageCounts[v.page] || 0) + 1;
+
+    // Browser
+    browserCounts[v.browser] = (browserCounts[v.browser] || 0) + 1;
+
+    // Device
+    deviceCounts[v.device] = (deviceCounts[v.device] || 0) + 1;
+
+    // OS
+    osCounts[v.os] = (osCounts[v.os] || 0) + 1;
+
+    // Language
+    langCounts[v.lang] = (langCounts[v.lang] || 0) + 1;
+
+    // Hourly
+    const hour = new Date(v.timestamp).getHours();
+    hourlyCounts[hour]++;
+
+    // Referer
+    refCounts[v.referer] = (refCounts[v.referer] || 0) + 1;
+
+    // Unique IPs
+    uniqueIPs.add(v.ip);
+  }
+
+  // Sort helper
+  const sortObj = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]);
+
+  // Today's count
+  const todayStr = now.toISOString().slice(0, 10);
+  const todayCount = dailyCounts[todayStr] || 0;
+
+  res.json({
+    summary: {
+      totalAllTime: visitorData.total,
+      today: todayCount,
+      periodViews: visits.length,
+      uniqueIPs: uniqueIPs.size,
+      days
+    },
+    dailyCounts: Object.entries(dailyCounts).sort((a, b) => a[0].localeCompare(b[0])),
+    countryCounts: sortObj(countryCounts),
+    pageCounts: sortObj(pageCounts),
+    browserCounts: sortObj(browserCounts),
+    deviceCounts: sortObj(deviceCounts),
+    osCounts: sortObj(osCounts),
+    langCounts: sortObj(langCounts),
+    hourlyCounts,
+    refCounts: sortObj(refCounts).slice(0, 10),
+    recentVisitors: visits.slice(-50).reverse()
   });
 });
 
+// Catch-all: serve index.html with language injection
 app.get('*', (req, res) => {
-  res.sendFile('index.html', { root: publicDir });
+  serveHtml(path.join(publicDir, 'index.html'), req, res);
 });
 
 const PORT = process.env.PORT || 80;
