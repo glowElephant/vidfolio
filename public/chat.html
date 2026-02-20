@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-i18n-title="page.chat.title">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat | 장한아</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=3">
+  <link rel="stylesheet" href="/css/style.css?v=4">
+  <script>(function(){var l=localStorage.getItem('lang');if(!l){var m=document.cookie.match(/(?:^|; )lang=([^;]*)/);l=m?m[1]:null}if(!l)l=document.documentElement.getAttribute('lang')||'ko';if(l==='en')document.documentElement.classList.add('lang-loading')})()</script>
 </head>
 <body>
   <canvas id="particle-canvas"></canvas>
@@ -22,6 +23,7 @@
       <li><a href="/career">~/career</a></li>
       <li><a href="/chat">~/chat</a></li>
     </ul>
+    <button id="lang-toggle" class="lang-toggle" onclick="window.I18N_ENGINE&&I18N_ENGINE.toggleLang()">$ EN</button>
     <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
   </nav>
 
@@ -44,19 +46,19 @@
         <div class="chat-welcome">
           <div class="chat-welcome-icon">gE</div>
           <h3>glowElephant Assistant</h3>
-          <p>장한아에 대해 궁금한 점을 물어보세요.</p>
-          <p class="chat-welcome-dim">경력, 기술 스택, 프로젝트, 협업 문의 등</p>
+          <p data-i18n="chat.welcome">장한아에 대해 궁금한 점을 물어보세요.</p>
+          <p class="chat-welcome-dim" data-i18n="chat.welcome_dim">경력, 기술 스택, 프로젝트, 협업 문의 등</p>
           <div class="chat-suggestions">
-            <button class="chat-suggestion" data-msg="어떤 기술 스택을 사용하나요?">기술 스택</button>
-            <button class="chat-suggestion" data-msg="주요 프로젝트를 소개해주세요">프로젝트 소개</button>
-            <button class="chat-suggestion" data-msg="외주 개발 가능한가요?">외주 문의</button>
-            <button class="chat-suggestion" data-msg="경력이 어떻게 되나요?">경력 소개</button>
+            <button class="chat-suggestion" data-msg="어떤 기술 스택을 사용하나요?" data-i18n="chat.suggestion.stack" data-i18n-data-msg="chat.suggestion.stack.msg">기술 스택</button>
+            <button class="chat-suggestion" data-msg="주요 프로젝트를 소개해주세요" data-i18n="chat.suggestion.project" data-i18n-data-msg="chat.suggestion.project.msg">프로젝트 소개</button>
+            <button class="chat-suggestion" data-msg="외주 개발 가능한가요?" data-i18n="chat.suggestion.outsource" data-i18n-data-msg="chat.suggestion.outsource.msg">외주 문의</button>
+            <button class="chat-suggestion" data-msg="경력이 어떻게 되나요?" data-i18n="chat.suggestion.career" data-i18n-data-msg="chat.suggestion.career.msg">경력 소개</button>
           </div>
         </div>
       </div>
 
       <div class="chat-input-area">
-        <textarea id="chatInput" placeholder="메시지를 입력하세요..." rows="1"></textarea>
+        <textarea id="chatInput" placeholder="메시지를 입력하세요..." data-i18n-placeholder="chat.input_placeholder" rows="1"></textarea>
         <button id="chatSend" class="chat-send-btn" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
@@ -69,8 +71,15 @@
 
   <script src="/js/particles.js"></script>
   <script src="/js/nav.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/i18n-engine.js"></script>
   <script>
   (function() {
+    var _t = function(key) {
+      var lang = (window.I18N_ENGINE && I18N_ENGINE.getLang()) || 'ko';
+      return (window.I18N && window.I18N[lang] && window.I18N[lang][key]) || key;
+    };
+
     const SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
     const messagesEl = document.getElementById('chatMessages');
     const inputEl = document.getElementById('chatInput');
@@ -133,19 +142,19 @@
         messages: []
       };
       saveSession(session);
-      messagesEl.innerHTML = `
-        <div class="chat-welcome">
-          <div class="chat-welcome-icon">gE</div>
-          <h3>glowElephant Assistant</h3>
-          <p>장한아에 대해 궁금한 점을 물어보세요.</p>
-          <p class="chat-welcome-dim">경력, 기술 스택, 프로젝트, 협업 문의 등</p>
-          <div class="chat-suggestions">
-            <button class="chat-suggestion" data-msg="어떤 기술 스택을 사용하나요?">기술 스택</button>
-            <button class="chat-suggestion" data-msg="주요 프로젝트를 소개해주세요">프로젝트 소개</button>
-            <button class="chat-suggestion" data-msg="외주 개발 가능한가요?">외주 문의</button>
-            <button class="chat-suggestion" data-msg="경력이 어떻게 되나요?">경력 소개</button>
-          </div>
-        </div>`;
+      messagesEl.innerHTML =
+        '<div class="chat-welcome">' +
+          '<div class="chat-welcome-icon">gE</div>' +
+          '<h3>glowElephant Assistant</h3>' +
+          '<p data-i18n="chat.welcome">' + _t('chat.welcome') + '</p>' +
+          '<p class="chat-welcome-dim" data-i18n="chat.welcome_dim">' + _t('chat.welcome_dim') + '</p>' +
+          '<div class="chat-suggestions">' +
+            '<button class="chat-suggestion" data-msg="' + _t('chat.suggestion.stack.msg') + '" data-i18n="chat.suggestion.stack" data-i18n-data-msg="chat.suggestion.stack.msg">' + _t('chat.suggestion.stack') + '</button>' +
+            '<button class="chat-suggestion" data-msg="' + _t('chat.suggestion.project.msg') + '" data-i18n="chat.suggestion.project" data-i18n-data-msg="chat.suggestion.project.msg">' + _t('chat.suggestion.project') + '</button>' +
+            '<button class="chat-suggestion" data-msg="' + _t('chat.suggestion.outsource.msg') + '" data-i18n="chat.suggestion.outsource" data-i18n-data-msg="chat.suggestion.outsource.msg">' + _t('chat.suggestion.outsource') + '</button>' +
+            '<button class="chat-suggestion" data-msg="' + _t('chat.suggestion.career.msg') + '" data-i18n="chat.suggestion.career" data-i18n-data-msg="chat.suggestion.career.msg">' + _t('chat.suggestion.career') + '</button>' +
+          '</div>' +
+        '</div>';
       bindSuggestions();
     });
 
@@ -182,8 +191,9 @@
     }
 
     function formatContent(text) {
-      // Strip CONTACT tags from visible output
+      // Strip CONTACT/FORWARD tags from visible output
       text = text.replace(/<!--CONTACT:.*?-->/g, '');
+      text = text.replace(/<!--FORWARD_CHATLOG:.*?-->/g, '');
       // Basic markdown: bold, code, links
       return escapeHtml(text)
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -266,7 +276,7 @@
         saveSession(session);
 
       } catch (err) {
-        bubble.innerHTML = '<span class="chat-error">AI 어시스턴트에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.</span>';
+        bubble.innerHTML = '<span class="chat-error">' + _t('chat.error_connection') + '</span>';
       }
 
       isStreaming = false;

@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-i18n-title="page.skills.title">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Skills | 장한아</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=3">
+  <link rel="stylesheet" href="/css/style.css?v=4">
+  <script>(function(){var l=localStorage.getItem('lang');if(!l){var m=document.cookie.match(/(?:^|; )lang=([^;]*)/);l=m?m[1]:null}if(!l)l=document.documentElement.getAttribute('lang')||'ko';if(l==='en')document.documentElement.classList.add('lang-loading')})()</script>
 </head>
 <body>
   <canvas id="particle-canvas"></canvas>
@@ -22,6 +23,7 @@
       <li><a href="/career">~/career</a></li>
       <li><a href="/chat">~/chat</a></li>
     </ul>
+    <button id="lang-toggle" class="lang-toggle" onclick="window.I18N_ENGINE&&I18N_ENGINE.toggleLang()">$ EN</button>
     <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
   </nav>
 
@@ -165,7 +167,7 @@
       <div class="terminal fade-in">
         <div class="terminal-header">
           <div class="terminal-dots"><span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span></div>
-          <div class="terminal-title">Toolbox — 45 tools</div>
+          <div class="terminal-title">Toolbox — 48 tools</div>
         </div>
         <div class="terminal-body">
 
@@ -248,6 +250,19 @@
             </div>
           </div>
 
+          <div class="tool-group fade-in" data-color="cyan">
+            <div class="tool-group-header">
+              <span class="tool-group-icon"></span>
+              <span class="tool-group-title">AI Agent Workflow</span>
+              <span class="tool-group-count">3</span>
+            </div>
+            <div class="tool-tags">
+              <span class="tool-tag" data-i18n="skills.tool.tmux_parallel">tmux 병렬 세션</span>
+              <span class="tool-tag" data-i18n="skills.tool.multi_agent">Multi-Agent 오케스트레이션</span>
+              <span class="tool-tag" data-i18n="skills.tool.ai_language">AI_Language 프로토콜</span>
+            </div>
+          </div>
+
           <div class="tool-group fade-in" data-color="blue">
             <div class="tool-group-header">
               <span class="tool-group-icon"></span>
@@ -271,11 +286,13 @@
 
   <footer>
     <p class="footer-msg">$ echo "Let's build something together."</p>
-    <p>&copy; 2025 장한아 | glowElephant</p>
+    <p data-i18n="footer.copyright">&copy; 2025 장한아 | glowElephant</p>
   </footer>
 
   <script src="/js/particles.js"></script>
   <script src="/js/nav.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/i18n-engine.js"></script>
   <script src="/js/animations.js"></script>
 </body>
 </html>

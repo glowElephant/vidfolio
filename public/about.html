@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-i18n-title="page.about.title">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>About | 장한아</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=3">
+  <link rel="stylesheet" href="/css/style.css?v=4">
+  <script>(function(){var l=localStorage.getItem('lang');if(!l){var m=document.cookie.match(/(?:^|; )lang=([^;]*)/);l=m?m[1]:null}if(!l)l=document.documentElement.getAttribute('lang')||'ko';if(l==='en')document.documentElement.classList.add('lang-loading')})()</script>
 </head>
 <body>
   <canvas id="particle-canvas"></canvas>
@@ -22,6 +23,7 @@
       <li><a href="/career">~/career</a></li>
       <li><a href="/chat">~/chat</a></li>
     </ul>
+    <button id="lang-toggle" class="lang-toggle" onclick="window.I18N_ENGINE&&I18N_ENGINE.toggleLang()">$ EN</button>
     <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
   </nav>
 
@@ -36,40 +38,42 @@
         <div class="terminal-body">
 
           <div class="about-block fade-in">
-            <h3>Product Builder 철학</h3>
+            <h3 data-i18n="about.philosophy.title">Product Builder 철학</h3>
             <ul>
-              <li>AI가 세상을 지배하는 시대. 코드를 짜는 것이 아닌 <span class="hl">문제를 정의하고 제품을 만드는 사람</span>이 필요</li>
-              <li>"이 기술을 사용할 줄 아는가?" &rarr; "<span class="hl">이 문제를 풀 수 있는가?</span>"로 패러다임 전환</li>
-              <li>상용화된 AI를 최대한 활용하여 <span class="hl">가치를 창출하는 인재</span></li>
+              <li data-i18n-html="about.philosophy.1">AI가 세상을 지배하는 시대. 코드를 짜는 것이 아닌 <span class="hl">문제를 정의하고 제품을 만드는 사람</span>이 필요</li>
+              <li data-i18n-html="about.philosophy.2">"이 기술을 사용할 줄 아는가?" &rarr; "<span class="hl">이 문제를 풀 수 있는가?</span>"로 패러다임 전환</li>
+              <li data-i18n-html="about.philosophy.3">상용화된 AI를 최대한 활용하여 <span class="hl">가치를 창출하는 인재</span></li>
             </ul>
           </div>
 
           <div class="about-block fade-in">
-            <h3>AI 활용 실전 사례</h3>
+            <h3 data-i18n="about.ai.title">AI 활용 실전 사례</h3>
             <ul>
-              <li>Unity NPC에 <span class="hl">OpenAI API</span> 연동 &rarr; 질문답변, 이미지 분석</li>
-              <li>나레이션 파이프라인: <span class="hl">Applio</span>로 음성모델 학습 &rarr; API 자동합성 (비용 80% 절감)</li>
-              <li>아동 발음 영상: <span class="hl">Midjourney/Flux</span> &rarr; <span class="hl">Applio</span> &rarr; <span class="hl">D-ID/HeyGen</span> 파이프라인 구축</li>
-              <li><span class="hl">OpenClaw + NotebookLM</span> 아침 뉴스 브리핑 자동화</li>
-              <li><span class="hl">Claude Code + tmux</span> 병렬 개발 워크플로우</li>
+              <li data-i18n-html="about.ai.1">Unity NPC에 <span class="hl">OpenAI API</span> 연동 &rarr; 질문답변, 이미지 분석</li>
+              <li data-i18n-html="about.ai.2">나레이션 파이프라인: <span class="hl">Applio</span>로 음성모델 학습 &rarr; API 자동합성 (비용 80% 절감)</li>
+              <li data-i18n-html="about.ai.3">아동 발음 영상: <span class="hl">Midjourney/Flux</span> &rarr; <span class="hl">Applio</span> &rarr; <span class="hl">D-ID/HeyGen</span> 파이프라인 구축</li>
+              <li data-i18n-html="about.ai.4"><span class="hl">OpenClaw + NotebookLM</span> 아침 뉴스 브리핑 자동화</li>
+              <li data-i18n-html="about.ai.5"><span class="hl">Claude Code + tmux</span> 멀티세션 병렬 개발: 메인 에이전트와 실시간 대화하며 서브 에이전트에 태스크 위임</li>
+              <li data-i18n-html="about.ai.6">에이전트 간 <span class="hl">AI_Language</span> 압축 통신 프로토콜 &rarr; 토큰 절감 + 효율적 협업</li>
+              <li data-i18n-html="about.ai.7">AI 에이전트를 도구가 아닌 <span class="hl">팀원으로 활용</span>하는 AI-First 개발 방식</li>
             </ul>
           </div>
 
           <div class="about-block fade-in">
-            <h3>문제 해결 DNA</h3>
+            <h3 data-i18n="about.problem.title">문제 해결 DNA</h3>
             <ul>
-              <li>카드 연출 수정: 연출자가 Inspector에서 직접 수정 가능한 <span class="hl">Tool 개발</span> &rarr; 시간 코스트 대폭 절감</li>
-              <li>나레이션 외주 파이프라인: 외주&rarr;프리랜서&rarr;검수&rarr;수정 의 비효율 &rarr; <span class="hl">Applio 기반 자체 생성 파이프라인</span> 구축</li>
-              <li>반복작업 발견 시 <span class="hl">Tool 제작을 우선순위</span>로 고려하는 마인드</li>
+              <li data-i18n-html="about.problem.1">카드 연출 수정: 연출자가 Inspector에서 직접 수정 가능한 <span class="hl">Tool 개발</span> &rarr; 시간 코스트 대폭 절감</li>
+              <li data-i18n-html="about.problem.2">나레이션 외주 파이프라인: 외주&rarr;프리랜서&rarr;검수&rarr;수정 의 비효율 &rarr; <span class="hl">Applio 기반 자체 생성 파이프라인</span> 구축</li>
+              <li data-i18n-html="about.problem.3">반복작업 발견 시 <span class="hl">Tool 제작을 우선순위</span>로 고려하는 마인드</li>
             </ul>
           </div>
 
           <div class="about-block fade-in">
-            <h3>협업 &amp; 커뮤니케이션</h3>
+            <h3 data-i18n="about.collab.title">협업 &amp; 커뮤니케이션</h3>
             <ul>
-              <li>다양한 부서와의 협업, 빠른 적응력, <span class="hl">라포 형성</span></li>
-              <li>전체 흐름을 인지하고 <span class="hl">병목 지점을 발견</span>해 능동적으로 역할 조정</li>
-              <li>사내 컨퍼런스 리딩, 비개발직군 <span class="hl">Git 멘토링</span>, 기술 공유 문화 주도</li>
+              <li data-i18n-html="about.collab.1">다양한 부서와의 협업, 빠른 적응력, <span class="hl">라포 형성</span></li>
+              <li data-i18n-html="about.collab.2">전체 흐름을 인지하고 <span class="hl">병목 지점을 발견</span>해 능동적으로 역할 조정</li>
+              <li data-i18n-html="about.collab.3">사내 컨퍼런스 리딩, 비개발직군 <span class="hl">Git 멘토링</span>, 기술 공유 문화 주도</li>
             </ul>
           </div>
 
@@ -81,11 +85,13 @@
 
   <footer>
     <p class="footer-msg">$ echo "Let's build something together."</p>
-    <p>&copy; 2025 장한아 | glowElephant</p>
+    <p data-i18n="footer.copyright">&copy; 2025 장한아 | glowElephant</p>
   </footer>
 
   <script src="/js/particles.js"></script>
   <script src="/js/nav.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/i18n-engine.js"></script>
   <script src="/js/animations.js"></script>
 </body>
 </html>

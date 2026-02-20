@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-i18n-title="page.home.title">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +7,8 @@
   <meta name="description" content="Product Builder 장한아의 포트폴리오. 기술을 쓸 줄 아는가보다, 문제를 풀 수 있는가.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=3">
+  <link rel="stylesheet" href="/css/style.css?v=4">
+  <script>(function(){var l=localStorage.getItem('lang');if(!l){var m=document.cookie.match(/(?:^|; )lang=([^;]*)/);l=m?m[1]:null}if(!l)l=document.documentElement.getAttribute('lang')||'ko';if(l==='en')document.documentElement.classList.add('lang-loading')})()</script>
 </head>
 <body>
   <canvas id="particle-canvas"></canvas>
@@ -23,6 +24,7 @@
       <li><a href="/career">~/career</a></li>
       <li><a href="/chat">~/chat</a></li>
     </ul>
+    <button id="lang-toggle" class="lang-toggle" onclick="window.I18N_ENGINE&&I18N_ENGINE.toggleLang()">$ EN</button>
     <button class="nav-toggle" aria-label="Menu">
       <span></span><span></span><span></span>
     </button>
@@ -45,14 +47,14 @@
 
           <div class="terminal-lines">
             <p class="terminal-line"><span class="prompt">$</span> whoami</p>
-            <p class="terminal-output">장한아 (Jang HanAh)</p>
+            <p class="terminal-output" data-i18n="home.name">장한아 (Jang HanAh)</p>
 
             <p class="terminal-line"><span class="prompt">$</span> cat role.txt</p>
             <p class="terminal-output">Product Builder</p>
 
             <p class="terminal-line"><span class="prompt">$</span> echo $TAGLINE</p>
             <p class="terminal-output">
-              <span class="typing-text" data-text="기술을 쓸 줄 아는가보다, 문제를 풀 수 있는가"></span><span class="typing-cursor">|</span>
+              <span class="typing-text" data-text="기술을 쓸 줄 아는가보다, 문제를 풀 수 있는가" data-i18n-data-text="home.tagline"></span><span class="typing-cursor">|</span>
             </p>
           </div>
 
@@ -77,7 +79,7 @@
         <span>Total: <span id="visitors-total">-</span></span>
       </span>
     </div>
-    <p>&copy; 2025 장한아 | glowElephant</p>
+    <p data-i18n="footer.copyright">&copy; 2025 장한아 | glowElephant</p>
   </footer>
 
   <script>
@@ -93,6 +95,8 @@
 
   <script src="/js/particles.js"></script>
   <script src="/js/nav.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/i18n-engine.js"></script>
   <script src="/js/animations.js"></script>
 </body>
 </html>

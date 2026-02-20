@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-i18n-title="page.projects.title">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Projects | 장한아</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=3">
+  <link rel="stylesheet" href="/css/style.css?v=4">
+  <script>(function(){var l=localStorage.getItem('lang');if(!l){var m=document.cookie.match(/(?:^|; )lang=([^;]*)/);l=m?m[1]:null}if(!l)l=document.documentElement.getAttribute('lang')||'ko';if(l==='en')document.documentElement.classList.add('lang-loading')})()</script>
 </head>
 <body>
   <canvas id="particle-canvas"></canvas>
@@ -22,6 +23,7 @@
       <li><a href="/career">~/career</a></li>
       <li><a href="/chat">~/chat</a></li>
     </ul>
+    <button id="lang-toggle" class="lang-toggle" onclick="window.I18N_ENGINE&&I18N_ENGINE.toggleLang()">$ EN</button>
     <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
   </nav>
 
@@ -41,7 +43,7 @@
         <!-- AI -->
         <div class="project-card fade-in" data-cat="ai">
           <h3><span class="repo-icon">&#9672;</span> AI_Language</h3>
-          <p class="desc">AI 에이전트 간 효율적 통신을 위한 압축 언어 프로토콜. 자연어 대비 토큰 사용량을 대폭 줄여 멀티 에이전트 시스템의 통신 효율을 극대화.</p>
+          <p class="desc" data-i18n="proj.ai_language.desc">AI 에이전트 간 효율적 통신을 위한 압축 언어 프로토콜. 자연어 대비 토큰 사용량을 대폭 줄여 멀티 에이전트 시스템의 통신 효율을 극대화.</p>
           <div class="project-tags">
             <span class="tag lang-ts">TypeScript</span>
             <span class="tag lang-ai">LLM Protocol</span>
@@ -52,7 +54,7 @@
 
         <div class="project-card fade-in" data-cat="ai">
           <h3><span class="repo-icon">&#9672;</span> the_agents</h3>
-          <p class="desc">에이전트들끼리 뚝딱뚝딱. 여러 LLM 에이전트가 협업하여 복잡한 태스크를 분담 처리하는 멀티 에이전트 시스템.</p>
+          <p class="desc" data-i18n="proj.the_agents.desc">에이전트들끼리 뚝딱뚝딱. 여러 LLM 에이전트가 협업하여 복잡한 태스크를 분담 처리하는 멀티 에이전트 시스템.</p>
           <div class="project-tags">
             <span class="tag lang-js">JavaScript</span>
             <span class="tag lang-ai">Agent</span>
@@ -63,7 +65,7 @@
 
         <div class="project-card fade-in" data-cat="ai">
           <h3><span class="repo-icon">&#9672;</span> Bom_Factory</h3>
-          <p class="desc">AI 기반 콘텐츠 생성 파이프라인. 텍스트에서 이미지, 영상까지 자동화된 제작 플로우.</p>
+          <p class="desc" data-i18n="proj.bom_factory.desc">AI 기반 콘텐츠 생성 파이프라인. 텍스트에서 이미지, 영상까지 자동화된 제작 플로우.</p>
           <div class="project-tags">
             <span class="tag lang-py">Python</span>
             <span class="tag lang-ai">Gen AI</span>
@@ -74,7 +76,7 @@
 
         <div class="project-card fade-in" data-cat="ai">
           <h3><span class="repo-icon">&#9672;</span> PDF_TO_VIDEO</h3>
-          <p class="desc">PDF 내용을 요약 → 알맞는 이미지와 텍스트 생성 → 지정한 나레이터로 나레이션 영상을 자동 제작하는 파이프라인.</p>
+          <p class="desc" data-i18n="proj.pdf_to_video.desc">PDF 내용을 요약 → 알맞는 이미지와 텍스트 생성 → 지정한 나레이터로 나레이션 영상을 자동 제작하는 파이프라인.</p>
           <div class="project-tags">
             <span class="tag lang-py">Python</span>
             <span class="tag lang-ai">D-ID</span>
@@ -85,7 +87,7 @@
 
         <div class="project-card fade-in" data-cat="ai">
           <h3><span class="repo-icon">&#9672;</span> llm-local-deploy</h3>
-          <p class="desc">Facebook LLaMA 모델 로컬 배포. Ollama를 활용한 오프라인 LLM 추론 환경 구축.</p>
+          <p class="desc" data-i18n="proj.llm_local.desc">Facebook LLaMA 모델 로컬 배포. Ollama를 활용한 오프라인 LLM 추론 환경 구축.</p>
           <div class="project-tags">
             <span class="tag lang-py">Python</span>
             <span class="tag lang-ai">Ollama</span>
@@ -96,7 +98,7 @@
 
         <div class="project-card fade-in" data-cat="ai">
           <h3><span class="repo-icon">&#9672;</span> veo_loop</h3>
-          <p class="desc">8초는 너무 짧다. AI 영상 생성 결과물을 이어붙여 더 긴 영상을 만드는 실험 프로젝트.</p>
+          <p class="desc" data-i18n="proj.veo_loop.desc">8초는 너무 짧다. AI 영상 생성 결과물을 이어붙여 더 긴 영상을 만드는 실험 프로젝트.</p>
           <div class="project-tags">
             <span class="tag lang-ai">Veo</span>
             <span class="tag lang-ai">Video Gen</span>
@@ -107,7 +109,7 @@
         <!-- Tool -->
         <div class="project-card fade-in" data-cat="tool">
           <h3><span class="repo-icon">&#9672;</span> PixelCrawler</h3>
-          <p class="desc">그대로 가져온다... 전부. 웹 페이지를 실제 브라우저로 렌더링하여 MHTML, PNG, PDF 스냅샷을 생성하는 CLI 도구.</p>
+          <p class="desc" data-i18n="proj.pixelcrawler.desc">그대로 가져온다... 전부. 웹 페이지를 실제 브라우저로 렌더링하여 MHTML, PNG, PDF 스냅샷을 생성하는 CLI 도구.</p>
           <div class="project-tags">
             <span class="tag lang-js">Puppeteer</span>
             <span class="tag lang-js">Node.js</span>
@@ -118,7 +120,7 @@
 
         <div class="project-card fade-in" data-cat="tool">
           <h3><span class="repo-icon">&#9672;</span> snap-path</h3>
-          <p class="desc">단축키로 캡쳐 → 저장 → 클립보드 경로 복사. 빠른 스크린샷 워크플로우 자동화.</p>
+          <p class="desc" data-i18n="proj.snap_path.desc">단축키로 캡쳐 → 저장 → 클립보드 경로 복사. 빠른 스크린샷 워크플로우 자동화.</p>
           <div class="project-tags">
             <span class="tag lang-py">Python</span>
             <span class="tag">CLI</span>
@@ -128,7 +130,7 @@
 
         <div class="project-card fade-in" data-cat="tool">
           <h3><span class="repo-icon">&#9672;</span> claude-usage-widget</h3>
-          <p class="desc">Claude API 사용량 모니터링 위젯. 실시간 토큰 소비량 및 비용 추적.</p>
+          <p class="desc" data-i18n="proj.claude_usage.desc">Claude API 사용량 모니터링 위젯. 실시간 토큰 소비량 및 비용 추적.</p>
           <div class="project-tags">
             <span class="tag lang-py">Python</span>
             <span class="tag">Widget</span>
@@ -138,7 +140,7 @@
 
         <div class="project-card fade-in" data-cat="tool">
           <h3><span class="repo-icon">&#9672;</span> universal-converter</h3>
-          <p class="desc">YouTube, 로컬 비디오/오디오/이미지/텍스트 변환 및 요약까지 지원하는 범용 파일 변환 CLI 도구.</p>
+          <p class="desc" data-i18n="proj.universal_converter.desc">YouTube, 로컬 비디오/오디오/이미지/텍스트 변환 및 요약까지 지원하는 범용 파일 변환 CLI 도구.</p>
           <div class="project-tags">
             <span class="tag lang-py">Python</span>
             <span class="tag">FFmpeg</span>
@@ -149,7 +151,7 @@
 
         <div class="project-card fade-in" data-cat="tool">
           <h3><span class="repo-icon">&#9672;</span> news-reporter</h3>
-          <p class="desc">매일매일 뉴스 리포팅. RSS 기반 키워드 뉴스 크롤링 → 원하는 카테고리와 시간에 이메일 리포팅.</p>
+          <p class="desc" data-i18n="proj.news_reporter.desc">매일매일 뉴스 리포팅. RSS 기반 키워드 뉴스 크롤링 → 원하는 카테고리와 시간에 이메일 리포팅.</p>
           <div class="project-tags">
             <span class="tag lang-py">Python</span>
             <span class="tag lang-py">Streamlit</span>
@@ -160,7 +162,7 @@
 
         <div class="project-card fade-in" data-cat="tool">
           <h3><span class="repo-icon">&#9672;</span> SimpleTcpChat</h3>
-          <p class="desc">TCP로 통신해서 메세지를 주고받는 간단한 예제. 네트워크 프로그래밍 기초 실습.</p>
+          <p class="desc" data-i18n="proj.simple_tcp.desc">TCP로 통신해서 메세지를 주고받는 간단한 예제. 네트워크 프로그래밍 기초 실습.</p>
           <div class="project-tags">
             <span class="tag lang-cs">C++</span>
             <span class="tag">TCP</span>
@@ -172,7 +174,7 @@
         <!-- Game -->
         <div class="project-card fade-in" data-cat="game">
           <h3><span class="repo-icon">&#9672;</span> DubuPang</h3>
-          <p class="desc">발달이 느린 아이들을 위한 디지털 치료 앱. 사용자 데이터 기반 난이도 자동 조절, 맞춤형 놀이 컨텐츠로 아동 발달을 지원하는 디지털 헬스케어 제품.</p>
+          <p class="desc" data-i18n="proj.dubupang.desc">발달이 느린 아이들을 위한 디지털 치료 앱. 사용자 데이터 기반 난이도 자동 조절, 맞춤형 놀이 컨텐츠로 아동 발달을 지원하는 디지털 헬스케어 제품.</p>
           <div class="project-tags">
             <span class="tag lang-cs">Unity</span>
             <span class="tag lang-cs">C#</span>
@@ -183,7 +185,7 @@
 
         <div class="project-card fade-in" data-cat="game">
           <h3><span class="repo-icon">&#9672;</span> Comix Breaker</h3>
-          <p class="desc">TCG 로그라이크 장르 모바일 게임. 카드 연출 시스템 (Quadratic Bezier Curve), Admob 연동, Jenkins CI/CD.</p>
+          <p class="desc" data-i18n="proj.comix.desc">TCG 로그라이크 장르 모바일 게임. 카드 연출 시스템 (Quadratic Bezier Curve), Admob 연동, Jenkins CI/CD.</p>
           <div class="project-tags">
             <span class="tag lang-cs">Unity</span>
             <span class="tag lang-cs">C#</span>
@@ -194,7 +196,7 @@
 
         <div class="project-card fade-in" data-cat="game">
           <h3><span class="repo-icon">&#9672;</span> DigWorld</h3>
-          <p class="desc">캐주얼 P2E 장르 모바일 게임. 땅을 파며 자원을 수집하는 디깅 시뮬레이션.</p>
+          <p class="desc" data-i18n="proj.digworld.desc">캐주얼 P2E 장르 모바일 게임. 땅을 파며 자원을 수집하는 디깅 시뮬레이션.</p>
           <div class="project-tags">
             <span class="tag lang-cs">Unity</span>
             <span class="tag lang-cs">C#</span>
@@ -205,7 +207,7 @@
 
         <div class="project-card fade-in" data-cat="game">
           <h3><span class="repo-icon">&#9672;</span> DigStar</h3>
-          <p class="desc">수집형 캐주얼 모바일 게임. Gamespark 서버 연동 풀스택 개발, 빌드 엔지니어링.</p>
+          <p class="desc" data-i18n="proj.digstar.desc">수집형 캐주얼 모바일 게임. Gamespark 서버 연동 풀스택 개발, 빌드 엔지니어링.</p>
           <div class="project-tags">
             <span class="tag lang-cs">Unity</span>
             <span class="tag lang-ts">Gamespark</span>
@@ -216,7 +218,7 @@
 
         <div class="project-card fade-in" data-cat="game">
           <h3><span class="repo-icon">&#9672;</span> minigame</h3>
-          <p class="desc">게임 포트폴리오 모음. 다양한 미니게임 프로토타입 컬렉션.</p>
+          <p class="desc" data-i18n="proj.minigame.desc">게임 포트폴리오 모음. 다양한 미니게임 프로토타입 컬렉션.</p>
           <div class="project-tags">
             <span class="tag lang-cs">Unity</span>
             <span class="tag lang-cs">C#</span>
@@ -227,7 +229,7 @@
         <!-- AR/XR -->
         <div class="project-card fade-in" data-cat="xr">
           <h3><span class="repo-icon">&#9672;</span> COEX AR Navigation</h3>
-          <p class="desc">코엑스 실내 AR 내비게이션 앱. Naver ARCeye VLsdk 기반 실내 정밀 측위, 실시간 3D 경로 안내, 확장형 컨텐츠 아키텍처.</p>
+          <p class="desc" data-i18n="proj.coex_ar.desc">코엑스 실내 AR 내비게이션 앱. Naver ARCeye VLsdk 기반 실내 정밀 측위, 실시간 3D 경로 안내, 확장형 컨텐츠 아키텍처.</p>
           <div class="project-tags">
             <span class="tag lang-cs">Unity</span>
             <span class="tag">Naver VLsdk</span>
@@ -239,7 +241,7 @@
         <!-- Web -->
         <div class="project-card fade-in" data-cat="web">
           <h3><span class="repo-icon">&#9672;</span> vidfolio</h3>
-          <p class="desc">개인 포트폴리오 사이트. CLI 터미널 스타일 인터랙티브 사이트. OpenClaw 기반 AI 실시간 상담 챗봇 탑재. Cloudflare Tunnel로 직접 호스팅.</p>
+          <p class="desc" data-i18n="proj.vidfolio.desc">개인 포트폴리오 사이트. CLI 터미널 스타일 인터랙티브 사이트. OpenClaw 기반 AI 실시간 상담 챗봇 탑재. Cloudflare Tunnel로 직접 호스팅.</p>
           <div class="project-tags">
             <span class="tag lang-js">Node.js</span>
             <span class="tag lang-web">Express</span>
@@ -252,7 +254,7 @@
 
         <div class="project-card fade-in" data-cat="web">
           <h3><span class="repo-icon">&#9672;</span> private_cctv</h3>
-          <p class="desc">남는 Android 기기로 CCTV를 만들어보자. 개인용 실시간 모니터링 & 스트리밍 시스템.</p>
+          <p class="desc" data-i18n="proj.private_cctv.desc">남는 Android 기기로 CCTV를 만들어보자. 개인용 실시간 모니터링 & 스트리밍 시스템.</p>
           <div class="project-tags">
             <span class="tag lang-dart">Kotlin</span>
             <span class="tag lang-web">Streaming</span>
@@ -262,7 +264,7 @@
 
         <div class="project-card fade-in" data-cat="web">
           <h3><span class="repo-icon">&#9672;</span> tiktok_clone</h3>
-          <p class="desc">Flutter로 만든 TikTok 클론 앱. 모바일 앱 개발 실습 프로젝트.</p>
+          <p class="desc" data-i18n="proj.tiktok_clone.desc">Flutter로 만든 TikTok 클론 앱. 모바일 앱 개발 실습 프로젝트.</p>
           <div class="project-tags">
             <span class="tag lang-dart">Flutter</span>
             <span class="tag lang-dart">Dart</span>
@@ -276,11 +278,13 @@
 
   <footer>
     <p class="footer-msg">$ echo "Let's build something together."</p>
-    <p>&copy; 2025 장한아 | glowElephant</p>
+    <p data-i18n="footer.copyright">&copy; 2025 장한아 | glowElephant</p>
   </footer>
 
   <script src="/js/particles.js"></script>
   <script src="/js/nav.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/i18n-engine.js"></script>
   <script src="/js/animations.js"></script>
 </body>
 </html>
